@@ -289,6 +289,175 @@
       color: var(--text-muted);
       margin-top: 1.5rem;
     }
+
+    /* Disarm Security Modal */
+    .modal-backdrop {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(4, 8, 16, 0.85);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      padding: 1rem;
+      animation: fadeIn 0.2s ease-out;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    .modal-box {
+      background: #111827;
+      border: 1px solid #1f293d;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.7), 0 0 30px rgba(56, 189, 248, 0.15);
+      border-radius: 18px;
+      width: 100%;
+      max-width: 360px;
+      padding: 1.75rem;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      gap: 1.1rem;
+      animation: scaleUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    @keyframes scaleUp {
+      from { transform: scale(0.92); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+    .modal-box.shake {
+      animation: shakeAnim 0.4s ease-in-out;
+    }
+    @keyframes shakeAnim {
+      0%, 100% { transform: translateX(0); }
+      20%, 60% { transform: translateX(-8px); }
+      40%, 80% { transform: translateX(8px); }
+    }
+    .modal-header .modal-icon {
+      font-size: 2.2rem;
+      margin-bottom: 0.3rem;
+    }
+    .modal-header h3 {
+      font-size: 1.25rem;
+      color: var(--text-main);
+      font-weight: 700;
+      margin-bottom: 0.25rem;
+    }
+    .modal-header p {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+    .pin-display-wrapper {
+      position: relative;
+      display: flex;
+      justify-content: center;
+    }
+    .pin-input {
+      width: 100%;
+      background: #090d16;
+      border: 2px solid #1e293b;
+      border-radius: 12px;
+      color: var(--accent);
+      font-size: 1.8rem;
+      letter-spacing: 0.5rem;
+      text-align: center;
+      padding: 0.6rem 1rem;
+      font-weight: 700;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .pin-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 12px var(--accent-glow);
+    }
+    .pin-error {
+      color: #f87171;
+      font-size: 0.85rem;
+      font-weight: 600;
+      background: rgba(239, 68, 68, 0.12);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      padding: 0.4rem 0.6rem;
+      border-radius: 8px;
+    }
+    .keypad-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.6rem;
+    }
+    .key-btn {
+      background: #1e293b;
+      color: var(--text-main);
+      border: 1px solid #334155;
+      border-radius: 12px;
+      font-size: 1.35rem;
+      font-weight: 700;
+      padding: 0.85rem 0;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      user-select: none;
+    }
+    .key-btn:hover {
+      background: #334155;
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .key-btn:active {
+      transform: scale(0.94);
+      background: #0ea5e9;
+      color: white;
+    }
+    .key-btn.key-action {
+      font-size: 1rem;
+      color: var(--text-muted);
+    }
+    .key-btn.key-action:hover {
+      color: #f87171;
+      border-color: #f87171;
+    }
+    .modal-btn-row {
+      display: flex;
+      gap: 0.6rem;
+    }
+    .modal-btn-row button {
+      flex: 1;
+      padding: 0.75rem 1rem;
+      font-size: 0.95rem;
+      border-radius: 10px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-cancel {
+      background: #1e293b;
+      color: var(--text-muted);
+      border: 1px solid #334155;
+    }
+    .btn-cancel:hover {
+      background: #334155;
+      color: var(--text-main);
+    }
+    .btn-submit-disarm {
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+      color: white;
+      border: none;
+      box-shadow: 0 4px 14px rgba(239, 68, 68, 0.4);
+    }
+    .btn-submit-disarm:hover {
+      background: linear-gradient(135deg, #dc2626, #b91c1c);
+    }
+    .pin-footer-tools {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: center;
+      gap: 0.5rem;
+      align-items: center;
+    }
+    .pin-footer-tools a {
+      color: var(--accent);
+      text-decoration: underline;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
@@ -319,7 +488,7 @@
   <!-- Command Actions -->
   <div class="btn-group">
     <button class="btn-arm" onclick="sendCommand('ARM')">&#128274; ARM SYSTEM</button>
-    <button class="btn-disarm" onclick="sendCommand('DISARM')">&#128275; DISARM SYSTEM</button>
+    <button class="btn-disarm" onclick="openDisarmModal()">&#128275; DISARM SYSTEM</button>
     <button class="btn-mute" onclick="sendCommand('MUTE')">&#128263; TOGGLE MUTE</button>
   </div>
 
@@ -388,6 +557,49 @@
   <footer>
     Project Guardian &bull; Free Global IoT Cloud Interface via GitHub Pages & MQTT
   </footer>
+</div>
+
+<!-- Disarm Security PIN Modal Dialog -->
+<div id="disarmModal" class="modal-backdrop" style="display:none;" onclick="handleBackdropClick(event)">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-icon">&#128274;</div>
+      <h3>Security PIN Required</h3>
+      <p>Enter your security PIN to disarm the alarm.</p>
+    </div>
+
+    <div class="pin-display-wrapper">
+      <input type="password" id="pinInput" class="pin-input" maxlength="8" placeholder="••••" readonly />
+    </div>
+    <div id="pinErrorMsg" class="pin-error" style="display:none;">&#9888; Incorrect PIN! Access Denied.</div>
+
+    <!-- Touch Keypad -->
+    <div class="keypad-grid">
+      <button type="button" class="key-btn" onclick="pressPin('1')">1</button>
+      <button type="button" class="key-btn" onclick="pressPin('2')">2</button>
+      <button type="button" class="key-btn" onclick="pressPin('3')">3</button>
+      <button type="button" class="key-btn" onclick="pressPin('4')">4</button>
+      <button type="button" class="key-btn" onclick="pressPin('5')">5</button>
+      <button type="button" class="key-btn" onclick="pressPin('6')">6</button>
+      <button type="button" class="key-btn" onclick="pressPin('7')">7</button>
+      <button type="button" class="key-btn" onclick="pressPin('8')">8</button>
+      <button type="button" class="key-btn" onclick="pressPin('9')">9</button>
+      <button type="button" class="key-btn key-action" onclick="clearPin()">CLR</button>
+      <button type="button" class="key-btn" onclick="pressPin('0')">0</button>
+      <button type="button" class="key-btn key-action" onclick="backspacePin()">&#9003;</button>
+    </div>
+
+    <div class="modal-btn-row">
+      <button type="button" class="btn-cancel" onclick="closeDisarmModal()">Cancel</button>
+      <button type="button" class="btn-submit-disarm" onclick="submitDisarmPin()">&#128275; Disarm</button>
+    </div>
+
+    <div class="pin-footer-tools">
+      <span>Default PIN: <strong>1234</strong></span>
+      &bull;
+      <a href="javascript:void(0)" onclick="changeSecurityPin()">Change PIN</a>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -563,6 +775,159 @@
       }
       alert('Channel updated to: ' + deviceId);
     }
+  }
+
+  // ==================== DISARM SECURITY PIN LOGIC ====================
+  let currentPin = '';
+  const DEFAULT_PIN = '1234';
+
+  function getStoredPin() {
+    return localStorage.getItem('guardian_disarm_pin') || DEFAULT_PIN;
+  }
+
+  function openDisarmModal() {
+    currentPin = '';
+    const pinInput = document.getElementById('pinInput');
+    const pinError = document.getElementById('pinErrorMsg');
+    pinInput.value = '';
+    pinError.style.display = 'none';
+    document.getElementById('disarmModal').style.display = 'flex';
+    document.addEventListener('keydown', handleKeypadKey);
+  }
+
+  function closeDisarmModal() {
+    document.getElementById('disarmModal').style.display = 'none';
+    document.removeEventListener('keydown', handleKeypadKey);
+    currentPin = '';
+  }
+
+  function handleBackdropClick(e) {
+    if (e.target.id === 'disarmModal') {
+      closeDisarmModal();
+    }
+  }
+
+  function pressPin(digit) {
+    if (currentPin.length < 8) {
+      currentPin += digit;
+      updatePinDisplay();
+      playClickSound();
+    }
+  }
+
+  function clearPin() {
+    currentPin = '';
+    updatePinDisplay();
+    document.getElementById('pinErrorMsg').style.display = 'none';
+  }
+
+  function backspacePin() {
+    currentPin = currentPin.slice(0, -1);
+    updatePinDisplay();
+    document.getElementById('pinErrorMsg').style.display = 'none';
+  }
+
+  function updatePinDisplay() {
+    document.getElementById('pinInput').value = currentPin;
+  }
+
+  function submitDisarmPin() {
+    const validPin = getStoredPin();
+    const pinError = document.getElementById('pinErrorMsg');
+    const modalBox = document.querySelector('.modal-box');
+
+    if (currentPin === validPin) {
+      playSuccessSound();
+      sendCommand('DISARM');
+      closeDisarmModal();
+    } else {
+      playErrorSound();
+      pinError.style.display = 'block';
+      modalBox.classList.remove('shake');
+      void modalBox.offsetWidth;
+      modalBox.classList.add('shake');
+      currentPin = '';
+      updatePinDisplay();
+    }
+  }
+
+  function handleKeypadKey(e) {
+    if (e.key >= '0' && e.key <= '9') {
+      pressPin(e.key);
+    } else if (e.key === 'Backspace') {
+      backspacePin();
+    } else if (e.key === 'Enter') {
+      submitDisarmPin();
+    } else if (e.key === 'Escape') {
+      closeDisarmModal();
+    }
+  }
+
+  function changeSecurityPin() {
+    const currentValid = getStoredPin();
+    const oldPin = prompt('Enter CURRENT Security PIN (default 1234):');
+    if (oldPin === null) return;
+    if (oldPin !== currentValid) {
+      alert('❌ Current PIN incorrect. Cannot change PIN.');
+      return;
+    }
+    const newPin = prompt('Enter NEW Security PIN (4 to 8 digits):');
+    if (!newPin) return;
+    if (newPin.trim().length < 4) {
+      alert('❌ PIN must be at least 4 digits.');
+      return;
+    }
+    localStorage.setItem('guardian_disarm_pin', newPin.trim());
+    alert('✅ Security PIN updated successfully!');
+  }
+
+  function playClickSound() {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(600, ctx.currentTime);
+      gain.gain.setValueAtTime(0.08, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.04);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.04);
+    } catch(e) {}
+  }
+
+  function playErrorSound() {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(180, ctx.currentTime);
+      gain.gain.setValueAtTime(0.12, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.25);
+    } catch(e) {}
+  }
+
+  function playSuccessSound() {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(523.25, ctx.currentTime);
+      osc.frequency.setValueAtTime(659.25, ctx.currentTime + 0.08);
+      gain.gain.setValueAtTime(0.1, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.25);
+    } catch(e) {}
   }
 
   window.addEventListener('load', initMQTT);
