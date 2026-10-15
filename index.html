@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Project Guardian &bull; Global Cloud Dashboard</title>
+  
+  <!-- MQTT.js library from CDN for secure WebSockets communication -->
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+
+  <style>
+    :root {
+      --bg: #090d16;
+      --card-bg: #131c2e;
+      --card-border: #1e2d4a;
+      --text-main: #f8fafc;
+      --text-muted: #8b9bb4;
+      --accent: #38bdf8;
+      --accent-glow: rgba(56, 189, 248, 0.25);
+      --danger: #ef4444;
+      --danger-glow: rgba(239, 68, 68, 0.35);
+      --warning: #f59e0b;
+      --success: #10b981;
+      --success-glow: rgba(16, 185, 129, 0.25);
+      --card-radius: 14px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text-main);
+      padding: 1.5rem 1rem;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 860px;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    /* Header */
+    header {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--card-radius);
+      padding: 1.25rem 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .header-titles h1 {
+      font-size: 1.5rem;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .header-titles p {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-top: 0.25rem;
+    }
+
+    .cloud-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.4rem 0.85rem;
+      border-radius: 9999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      border: 1px solid var(--card-border);
+      background: #0f172a;
+    }
+
+    .cloud-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--warning);
+    }
+    .cloud-dot.connected { background: var(--success); box-shadow: 0 0 8px var(--success); }
+    .cloud-dot.disconnected { background: var(--danger); box-shadow: 0 0 8px var(--danger); }
+
+    /* Security Status Banner */
+    .status-banner {
+      background: var(--card-bg);
+      border: 2px solid var(--card-border);
+      border-radius: var(--card-radius);
+      padding: 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+      transition: all 0.3s ease;
+    }
+
+    .status-banner.disarmed {
+      border-color: var(--success);
+      box-shadow: 0 0 16px var(--success-glow);
+    }
+
+    .status-banner.armed {
+      border-color: var(--accent);
+      box-shadow: 0 0 16px var(--accent-glow);
+    }
+
+    .status-banner.alarm {
+      border-color: var(--danger);
+      background: rgba(239, 68, 68, 0.08);
+      box-shadow: 0 0 24px var(--danger-glow);
+      animation: alertPulse 1.2s infinite alternate;
+    }
+
+    @keyframes alertPulse {
+      0% { box-shadow: 0 0 12px var(--danger-glow); }
+      100% { box-shadow: 0 0 28px rgba(239, 68, 68, 0.6); }
+    }
+
+    .status-info h2 {
+      font-size: 1rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+    }
+
+    .status-info .state-text {
+      font-size: 2rem;
+      font-weight: 800;
+      margin-top: 0.2rem;
+    }
+
+    /* Control Buttons */
+    .btn-group {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      width: 100%;
+    }
+
+    button {
+      flex: 1;
+      min-width: 140px;
+      padding: 0.85rem 1.25rem;
+      border: none;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 0.95rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      transition: all 0.2s ease;
+    }
+
+    button:active { transform: scale(0.97); }
+
+    .btn-arm {
+      background: #0284c7;
+      color: white;
+    }
+    .btn-arm:hover { background: #0369a1; }
+
+    .btn-disarm {
+      background: #1e293b;
+      color: var(--text-main);
+      border: 1px solid var(--card-border);
+    }
+    .btn-disarm:hover { background: #334155; }
+
+    .btn-mute {
+      background: #6d28d9;
+      color: white;
+    }
+    .btn-mute:hover { background: #5b21b6; }
+
+    /* Telemetry Grid */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 1rem;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--card-radius);
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      transition: transform 0.2s;
+    }
+
+    .card:hover { transform: translateY(-2px); }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .card-title {
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.75px;
+      color: var(--text-muted);
+    }
+
+    .card-icon {
+      font-size: 1.2rem;
+    }
+
+    .card-value {
+      font-size: 1.8rem;
+      font-weight: 800;
+      color: var(--text-main);
+    }
+
+    .tag {
+      display: inline-block;
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 9999px;
+      width: fit-content;
+      margin-top: 0.25rem;
+    }
+
+    .tag-ok { background: rgba(16, 185, 129, 0.15); color: var(--success); border: 1px solid var(--success); }
+    .tag-danger { background: rgba(239, 68, 68, 0.15); color: var(--danger); border: 1px solid var(--danger); }
+    .tag-warn { background: rgba(245, 158, 11, 0.15); color: var(--warning); border: 1px solid var(--warning); }
+    .tag-info { background: rgba(56, 189, 248, 0.15); color: var(--accent); border: 1px solid var(--accent); }
+
+    /* Channel Settings Bar */
+    .settings-bar {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--card-radius);
+      padding: 1rem 1.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .channel-input {
+      background: #090d16;
+      border: 1px solid var(--card-border);
+      color: var(--text-main);
+      padding: 0.4rem 0.75rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-family: monospace;
+      outline: none;
+    }
+
+    .channel-input:focus {
+      border-color: var(--accent);
+    }
+
+    footer {
+      text-align: center;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 1.5rem;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <!-- Header -->
+  <header>
+    <div class="header-titles">
+      <h1>&#128737; PROJECT GUARDIAN</h1>
+      <p>Global IoT Remote Security & Telemetry Hub</p>
+    </div>
+    <div class="cloud-pill">
+      <div id="cloudDot" class="cloud-dot"></div>
+      <span id="cloudStatus">Connecting to Cloud...</span>
+    </div>
+  </header>
+
+  <!-- Security State Banner -->
+  <div id="statusBanner" class="status-banner disarmed">
+    <div class="status-info">
+      <h2>System Security State</h2>
+      <div id="stateText" class="state-text" style="color: var(--success);">DISARMED</div>
+      <small id="subStateText" style="color: var(--text-muted);">Ready & Standby</small>
+    </div>
+    <div id="alarmBadge" style="display:none;" class="tag tag-danger">SIREN ACTIVE</div>
+  </div>
+
+  <!-- Command Actions -->
+  <div class="btn-group">
+    <button class="btn-arm" onclick="sendCommand('ARM')">&#128274; ARM SYSTEM</button>
+    <button class="btn-disarm" onclick="sendCommand('DISARM')">&#128275; DISARM SYSTEM</button>
+    <button class="btn-mute" onclick="sendCommand('MUTE')">&#128263; TOGGLE MUTE</button>
+  </div>
+
+  <!-- Telemetry Grid -->
+  <div class="grid">
+    <!-- mmWave Radar Card -->
+    <div class="card" style="grid-column: span 1;">
+      <div class="card-header">
+        <span class="card-title">mmWave Radar (LD2412)</span>
+        <span class="card-icon">&#128225;</span>
+      </div>
+      <div id="valRadar" class="card-value">VACANT</div>
+      <span id="tagRadar" class="tag tag-ok">ROOM CLEAR</span>
+    </div>
+
+    <!-- Flame Detection Card -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Flame Sensor</span>
+        <span class="card-icon">&#128293;</span>
+      </div>
+      <div id="valFlame" class="card-value">--</div>
+      <span id="tagFlame" class="tag tag-ok">NO FIRE</span>
+    </div>
+
+    <!-- Temperature Card -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Temperature</span>
+        <span class="card-icon">&#127777;&#65039;</span>
+      </div>
+      <div id="valTemp" class="card-value">-- &deg;C</div>
+      <span id="tagTemp" class="tag tag-ok">NORMAL</span>
+    </div>
+
+    <!-- Humidity Card -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Humidity</span>
+        <span class="card-icon">&#128167;</span>
+      </div>
+      <div id="valHum" class="card-value">-- %</div>
+      <span id="tagHum" class="tag tag-ok">NORMAL</span>
+    </div>
+
+    <!-- Orientation & Tamper -->
+    <div class="card" style="grid-column: span 2;">
+      <div class="card-header">
+        <span class="card-title">Orientation & Tamper Monitor (MPU-6050)</span>
+        <span class="card-icon">&#129517;</span>
+      </div>
+      <div id="valTilt" class="card-value">Pitch: 0&deg; | Roll: 0&deg;</div>
+      <span id="tagTamper" class="tag tag-ok">SECURE & MOUNTED</span>
+    </div>
+  </div>
+
+  <!-- Settings / Device Channel Bar -->
+  <div class="settings-bar">
+    <div>
+      <strong>Device ID Channel:</strong>
+      <input type="text" id="deviceIdInput" class="channel-input" value="guardian_hub_01" onchange="updateChannel()">
+    </div>
+    <div id="lastSeen">Last seen: Waiting for ESP32...</div>
+  </div>
+
+  <footer>
+    Project Guardian &bull; Free Global IoT Cloud Interface via GitHub Pages & MQTT
+  </footer>
+</div>
+
+<script>
+  // Configuration: Default channel matches ESP32 code
+  let deviceId = localStorage.getItem('guardian_device_id') || 'guardian_hub_01';
+  document.getElementById('deviceIdInput').value = deviceId;
+
+  // Cloud MQTT Broker (Secure WebSockets over WSS)
+  // Using public high-availability EMQX broker - zero sign up required!
+  const BROKER_URL = 'wss://broker.emqx.io:8084/mqtt';
+  
+  let client = null;
+
+  function initMQTT() {
+    const cloudDot = document.getElementById('cloudDot');
+    const cloudStatus = document.getElementById('cloudStatus');
+
+    cloudStatus.innerText = 'Connecting to Global Cloud...';
+    cloudDot.className = 'cloud-dot';
+
+    const clientId = 'web_guardian_' + Math.random().toString(16).substr(2, 8);
+    client = mqtt.connect(BROKER_URL, {
+      clientId: clientId,
+      clean: true,
+      connectTimeout: 4000,
+      reconnectPeriod: 3000,
+    });
+
+    client.on('connect', () => {
+      cloudDot.className = 'cloud-dot connected';
+      cloudStatus.innerText = 'Global Cloud Online';
+      console.log('Connected to MQTT Cloud Broker!');
+
+      // Subscribe to telemetry, state, and alarms
+      client.subscribe(`${deviceId}/telemetry`);
+      client.subscribe(`${deviceId}/state`);
+      client.subscribe(`${deviceId}/alarm`);
+    });
+
+    client.on('message', (topic, message) => {
+      const msgStr = message.toString();
+
+      if (topic.endsWith('/telemetry')) {
+        try {
+          const data = JSON.parse(msgStr);
+          updateTelemetry(data);
+        } catch (e) {
+          console.error('JSON parse error', e);
+        }
+      } else if (topic.endsWith('/state')) {
+        updateSecurityState(msgStr);
+      } else if (topic.endsWith('/alarm')) {
+        handleAlarmState(msgStr);
+      }
+    });
+
+    client.on('error', (err) => {
+      console.error('MQTT error', err);
+      cloudDot.className = 'cloud-dot disconnected';
+      cloudStatus.innerText = 'Connection Error';
+    });
+
+    client.on('offline', () => {
+      cloudDot.className = 'cloud-dot disconnected';
+      cloudStatus.innerText = 'Cloud Offline';
+    });
+  }
+
+  function sendCommand(cmd) {
+    if (client && client.connected) {
+      client.publish(`${deviceId}/command`, cmd);
+      console.log('Published command:', cmd);
+    } else {
+      alert('Cannot send command: Website is not connected to cloud broker.');
+    }
+  }
+
+  function updateSecurityState(state) {
+    const banner = document.getElementById('statusBanner');
+    const stateText = document.getElementById('stateText');
+    const subText = document.getElementById('subStateText');
+
+    if (state === 'ARMED') {
+      banner.className = 'status-banner armed';
+      stateText.innerText = 'ARMED';
+      stateText.style.color = 'var(--accent)';
+      subText.innerText = 'Perimeter & Sensors Active';
+    } else if (state === 'ARMING') {
+      banner.className = 'status-banner armed';
+      stateText.innerText = 'ARMING (EXIT DELAY)';
+      stateText.style.color = 'var(--warning)';
+      subText.innerText = 'Clear area within 10 seconds';
+    } else {
+      banner.className = 'status-banner disarmed';
+      stateText.innerText = 'DISARMED';
+      stateText.style.color = 'var(--success)';
+      subText.innerText = 'Standby / Room Presence Mode';
+    }
+  }
+
+  function handleAlarmState(alarm) {
+    const banner = document.getElementById('statusBanner');
+    const badge = document.getElementById('alarmBadge');
+
+    if (alarm !== 'NORMAL' && alarm !== 'CLEAR') {
+      banner.className = 'status-banner alarm';
+      badge.style.display = 'inline-block';
+      badge.innerText = `ALARM: ${alarm}!`;
+    } else {
+      badge.style.display = 'none';
+    }
+  }
+
+  function updateTelemetry(d) {
+    document.getElementById('lastSeen').innerText = 'Last update: ' + new Date().toLocaleTimeString();
+
+    // Temperature & Humidity
+    document.getElementById('valTemp').innerHTML = d.temp.toFixed(1) + ' &deg;C';
+    const tagTemp = document.getElementById('tagTemp');
+    tagTemp.innerText = (d.temp >= 38.0) ? 'HIGH TEMP' : 'NORMAL';
+    tagTemp.className = 'tag ' + (d.temp >= 38.0 ? 'tag-danger' : 'tag-ok');
+
+    document.getElementById('valHum').innerText = d.hum.toFixed(0) + ' %';
+    const tagHum = document.getElementById('tagHum');
+    tagHum.innerText = (d.hum < 20.0) ? 'LOW HUMIDITY' : 'NORMAL';
+    tagHum.className = 'tag ' + (d.hum < 20.0 ? 'tag-warn' : 'tag-ok');
+
+    // mmWave Radar
+    const valRadar = document.getElementById('valRadar');
+    const tagRadar = document.getElementById('tagRadar');
+    if (d.intrusion) {
+      valRadar.innerText = 'INTRUDER!';
+      tagRadar.innerText = 'ALARM TRIGGERED';
+      tagRadar.className = 'tag tag-danger';
+    } else if (d.mmwave) {
+      valRadar.innerText = 'OCCUPIED';
+      tagRadar.innerText = 'HUMAN DETECTED';
+      tagRadar.className = 'tag tag-warn';
+    } else {
+      valRadar.innerText = 'VACANT';
+      tagRadar.innerText = 'ROOM CLEAR';
+      tagRadar.className = 'tag tag-ok';
+    }
+
+    // Flame
+    document.getElementById('valFlame').innerText = d.flame;
+    const tagFlame = document.getElementById('tagFlame');
+    tagFlame.innerText = d.flame < 1500 ? 'FIRE HAZARD!' : 'SAFE';
+    tagFlame.className = 'tag ' + (d.flame < 1500 ? 'tag-danger' : 'tag-ok');
+
+    // MPU6050
+    document.getElementById('valTilt').innerText =
+      `Pitch (X): ${d.angleX.toFixed(0)}°  |  Roll (Y): ${d.angleY.toFixed(0)}°`;
+    const tagTamper = document.getElementById('tagTamper');
+    tagTamper.innerText = d.tamper ? 'TAMPER ALARM!' : 'SECURE';
+    tagTamper.className = 'tag ' + (d.tamper ? 'tag-danger' : 'tag-ok');
+  }
+
+  function updateChannel() {
+    const newId = document.getElementById('deviceIdInput').value.trim();
+    if (newId && newId !== deviceId) {
+      if (client) {
+        client.unsubscribe(`${deviceId}/telemetry`);
+        client.unsubscribe(`${deviceId}/state`);
+        client.unsubscribe(`${deviceId}/alarm`);
+      }
+      deviceId = newId;
+      localStorage.setItem('guardian_device_id', deviceId);
+      if (client && client.connected) {
+        client.subscribe(`${deviceId}/telemetry`);
+        client.subscribe(`${deviceId}/state`);
+        client.subscribe(`${deviceId}/alarm`);
+      }
+      alert('Channel updated to: ' + deviceId);
+    }
+  }
+
+  window.addEventListener('load', initMQTT);
+</script>
+</body>
+</html>
