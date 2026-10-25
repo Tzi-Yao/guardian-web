@@ -806,11 +806,14 @@
       </h1>
       <p>ESP32-S3 IoT Security &bull; TinyML &amp; Anomaly Intelligence</p>
     </div>
-    <div class="header-right">
+    <div class="header-right" style="display:flex; align-items:center; gap:0.6rem;">
       <div class="cloud-pill">
         <div id="cloudDot" class="cloud-dot"></div>
         <span id="cloudStatus">Connecting to Cloud...</span>
       </div>
+      <button onclick="openOtaModal()" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.18); color:#f5f5f7; padding:0.5rem 0.9rem; border-radius:980px; font-weight:600; font-size:0.8rem; cursor:pointer; display:flex; align-items:center; gap:0.4rem; transition:all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.16)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'">
+        <span>⚡</span> Firmware OTA
+      </button>
     </div>
   </header>
 
@@ -948,6 +951,7 @@
           <button type="button" class="segment-btn" onclick="switchGraphMetric('hum')">Humidity</button>
           <button type="button" class="segment-btn" onclick="switchGraphMetric('anomaly')">AI Anomaly</button>
           <button type="button" class="segment-btn" onclick="switchGraphMetric('flame')">Flame IR</button>
+          <button type="button" class="segment-btn" onclick="switchGraphMetric('rssi')">Signal (dBm)</button>
         </div>
       </div>
     </div>
@@ -979,6 +983,39 @@
     <!-- Chart Canvas -->
     <div class="chart-canvas-container">
       <canvas id="telemetryChart"></canvas>
+    </div>
+  </div>
+
+  <!-- OTA Firmware Update Card -->
+  <div class="card" style="margin-bottom: 1.5rem; border: 1px solid rgba(10, 132, 255, 0.25); background: linear-gradient(180deg, rgba(28,28,30,0.8) 0%, rgba(10,132,255,0.05) 100%);">
+    <div class="card-header">
+      <div style="display:flex; align-items:center; gap:0.6rem;">
+        <span style="font-size:1.3rem;">⚡</span>
+        <div>
+          <div style="font-weight:700; color:#fff; font-size:1rem; letter-spacing:-0.01em;">Over-The-Air (OTA) Firmware Flashing</div>
+          <small style="color:var(--text-secondary);">Wirelessly upgrade your ESP32-S3 without physical USB cables</small>
+        </div>
+      </div>
+      <span class="tag tag-safe" style="border-color:rgba(10,132,255,0.4); color:var(--apple-blue); background:rgba(10,132,255,0.12);">OTA READY</span>
+    </div>
+
+    <div style="margin-top:1rem; display:flex; flex-wrap:wrap; gap:1rem; align-items:center; justify-content:space-between;">
+      <div style="flex:1; min-width:260px;">
+        <div style="font-size:0.85rem; color:#d1d1d6; line-height:1.45;">
+          Compile in PlatformIO to get <code style="background:rgba(255,255,255,0.1); padding:2px 6px; border-radius:4px; color:#5ac8fa;">firmware.bin</code>. Launch the local web OTA uploader directly on your board:
+        </div>
+        <div style="margin-top:0.6rem; display:flex; gap:0.6rem; align-items:center; flex-wrap:wrap;">
+          <input type="text" id="otaIpInput" value="192.168.68.102" placeholder="ESP32 Local IP" style="background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.15); color:#fff; padding:0.45rem 0.8rem; border-radius:10px; font-family:monospace; font-size:0.85rem; width:150px;">
+          <button onclick="launchOtaPortal()" style="background:linear-gradient(180deg, #0a84ff 0%, #0071e3 100%); color:#fff; border:none; padding:0.5rem 1.1rem; border-radius:980px; font-weight:600; font-size:0.82rem; cursor:pointer; box-shadow:0 3px 10px rgba(10,132,255,0.35);">
+            🚀 Open Local OTA Uploader
+          </button>
+        </div>
+      </div>
+      <div style="background:rgba(0,0,0,0.3); border:1px dashed rgba(255,255,255,0.15); border-radius:14px; padding:0.9rem 1.2rem; text-align:center; min-width:220px;">
+        <div style="font-size:0.75rem; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.04em; font-weight:600;">Latest Build Location</div>
+        <div style="font-family:monospace; font-size:0.75rem; color:#5ac8fa; margin-top:4px;">.pio/build/.../firmware.bin</div>
+        <div style="font-size:0.75rem; color:#30d158; margin-top:4px;">✔ Port COM15 Freed for OTA</div>
+      </div>
     </div>
   </div>
 
@@ -1102,7 +1139,8 @@
     temp: [],
     hum: [],
     anomaly: [],
-    flame: []
+    flame: [],
+    rssi: []
   };
 
   const metricConfigs = {
@@ -1129,6 +1167,12 @@
       color: '#ff9f0a',
       gradientStart: 'rgba(255, 159, 10, 0.28)',
       unit: 'ADC'
+    },
+    rssi: {
+      label: 'Wi-Fi Signal Strength (dBm)',
+      color: '#5ac8fa',
+      gradientStart: 'rgba(90, 200, 250, 0.28)',
+      unit: 'dBm'
     }
   };
 
@@ -1282,13 +1326,14 @@
     }
   }
 
-  function pushChartData(timeLabel, temp, hum, anomaly, flame) {
+  function pushChartData(timeLabel, temp, hum, anomaly, flame, rssi) {
     if (historyData.labels.length >= MAX_STORAGE_POINTS) {
       historyData.labels.shift();
       historyData.temp.shift();
       historyData.hum.shift();
       historyData.anomaly.shift();
       historyData.flame.shift();
+      if (historyData.rssi) historyData.rssi.shift();
     }
 
     historyData.labels.push(timeLabel);
@@ -1296,6 +1341,8 @@
     historyData.hum.push(hum);
     historyData.anomaly.push(anomaly);
     historyData.flame.push(flame);
+    if (!historyData.rssi) historyData.rssi = [];
+    historyData.rssi.push(rssi !== undefined ? rssi : -60);
 
     updateChartRender();
   }
@@ -1513,7 +1560,8 @@
       }
 
       // Push live numbers to Chart
-      pushChartData(nowTime, tempNum, humNum, anomalyNum, flameNum);
+      const rssiNum = (typeof d.rssi === 'number') ? d.rssi : (parseInt(d.rssi) || -60);
+      pushChartData(nowTime, tempNum, humNum, anomalyNum, flameNum, rssiNum);
     } catch (err) {
       console.error('Error updating telemetry UI:', err);
     }
@@ -1794,6 +1842,44 @@
     initChart();
     initMQTT();
   });
+</script>
+<!-- OTA Modal -->
+<div id="otaModal" class="modal-backdrop" style="display:none;" onclick="if(event.target === this) closeOtaModal()">
+  <div class="modal-box" style="max-width:440px; text-align:center;">
+    <div style="font-size:2.4rem; margin-bottom:0.5rem;">⚡</div>
+    <h3 style="color:#fff; font-size:1.25rem; font-weight:700; margin-bottom:0.4rem;">Wireless Firmware Update</h3>
+    <p style="color:var(--text-secondary); font-size:0.85rem; margin-bottom:1.2rem; line-height:1.4;">
+      Upload a newly compiled <code style="color:#5ac8fa; background:rgba(255,255,255,0.08); padding:2px 5px; border-radius:4px;">firmware.bin</code> directly into the ESP32-S3 over your local Wi-Fi network.
+    </p>
+
+    <div style="background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:1rem; margin-bottom:1.2rem; text-align:left;">
+      <label style="font-size:0.75rem; text-transform:uppercase; color:var(--text-secondary); font-weight:600; display:block; margin-bottom:6px;">ESP32 Hub Local IP Address</label>
+      <input type="text" id="modalOtaIp" value="192.168.68.102" style="width:100%; box-sizing:border-box; background:rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.18); border-radius:8px; padding:0.6rem 0.8rem; color:#fff; font-family:monospace; font-size:0.95rem;">
+    </div>
+
+    <div style="display:flex; gap:0.6rem;">
+      <button onclick="closeOtaModal()" style="flex:1; background:rgba(255,255,255,0.08); color:#f5f5f7; border:none; padding:0.75rem; border-radius:980px; font-weight:600; font-size:0.85rem; cursor:pointer;">Cancel</button>
+      <button onclick="openOtaDirect()" style="flex:1.5; background:linear-gradient(180deg, #0a84ff 0%, #0071e3 100%); color:#fff; border:none; padding:0.75rem; border-radius:980px; font-weight:600; font-size:0.85rem; cursor:pointer; box-shadow:0 4px 14px rgba(10,132,255,0.35);">Open OTA Flasher &#10140;</button>
+    </div>
+  </div>
+</div>
+
+<script>
+function openOtaModal() {
+  document.getElementById('otaModal').style.display = 'flex';
+}
+function closeOtaModal() {
+  document.getElementById('otaModal').style.display = 'none';
+}
+function launchOtaPortal() {
+  const ip = document.getElementById('otaIpInput').value.trim() || '192.168.68.102';
+  window.open('http://' + ip + '/update', '_blank');
+}
+function openOtaDirect() {
+  const ip = document.getElementById('modalOtaIp').value.trim() || '192.168.68.102';
+  closeOtaModal();
+  window.open('http://' + ip + '/update', '_blank');
+}
 </script>
 </body>
 </html>
