@@ -555,13 +555,33 @@
     </div>
 
     <!-- Orientation & Tamper -->
-    <div class="card" style="grid-column: span 2;">
+    <div class="card">
       <div class="card-header">
-        <span class="card-title">Orientation & Tamper Monitor (MPU-6050)</span>
+        <span class="card-title">Orientation &amp; Tamper (MPU-6050)</span>
         <span class="card-icon">&#129517;</span>
       </div>
       <div id="valTilt" class="card-value">Pitch: 0&deg; | Roll: 0&deg;</div>
-      <span id="tagTamper" class="tag tag-ok">SECURE & MOUNTED</span>
+      <span id="tagTamper" class="tag tag-ok">SECURE &amp; MOUNTED</span>
+    </div>
+
+    <!-- AI #1: TinyML Motion & Bump Classifier -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">AI #1 &bull; TinyML Motion Classifier</span>
+        <span class="card-icon">&#129504;</span>
+      </div>
+      <div id="valAiMotion" class="card-value">STILL (99%)</div>
+      <span id="tagAiMotion" class="tag tag-info">BUMPS FILTERED: 0</span>
+    </div>
+
+    <!-- AI #2: Self-Learning Environmental Anomaly Engine -->
+    <div class="card" style="grid-column: span 1;">
+      <div class="card-header">
+        <span class="card-title">AI #2 &bull; Env Anomaly Score</span>
+        <span class="card-icon">&#10024;</span>
+      </div>
+      <div id="valAiAnomaly" class="card-value">0 %</div>
+      <span id="tagAiAnomaly" class="tag tag-info">LEARNING BASELINE...</span>
     </div>
   </div>
 
@@ -776,6 +796,37 @@
     const tagTamper = document.getElementById('tagTamper');
     tagTamper.innerText = d.tamper ? 'TAMPER ALARM!' : 'SECURE';
     tagTamper.className = 'tag ' + (d.tamper ? 'tag-danger' : 'tag-ok');
+
+    // AI #1: TinyML Motion Classifier
+    if (d.aiMotion !== undefined) {
+      const valAiMotion = document.getElementById('valAiMotion');
+      const tagAiMotion = document.getElementById('tagAiMotion');
+      valAiMotion.innerText = `${d.aiMotion} (${d.aiConf || 99}%)`;
+      tagAiMotion.innerText = `BUMPS FILTERED: ${d.aiBumps || 0}`;
+      if (d.aiMotion === 'TAMPER') {
+        tagAiMotion.className = 'tag tag-danger';
+      } else if (d.aiMotion === 'BUMP') {
+        tagAiMotion.className = 'tag tag-warn';
+      } else {
+        tagAiMotion.className = 'tag tag-info';
+      }
+    }
+
+    // AI #2: Environmental Anomaly Detector
+    if (d.aiScore !== undefined) {
+      const valAiAnomaly = document.getElementById('valAiAnomaly');
+      const tagAiAnomaly = document.getElementById('tagAiAnomaly');
+      valAiAnomaly.innerText = `${d.aiScore.toFixed(0)} %`;
+      const baseInfo = d.baseTemp ? ` (Base: ${d.baseTemp.toFixed(1)}°C / ${d.baseHum.toFixed(0)}%)` : '';
+      tagAiAnomaly.innerText = `${d.aiEnv || 'NORMAL'}${baseInfo}`;
+      if (d.envAnomaly || d.aiEnv === 'ANOMALY') {
+        tagAiAnomaly.className = 'tag tag-danger';
+      } else if (d.aiEnv === 'UNUSUAL') {
+        tagAiAnomaly.className = 'tag tag-warn';
+      } else {
+        tagAiAnomaly.className = 'tag tag-ok';
+      }
+    }
   }
 
   function updateChannel() {
