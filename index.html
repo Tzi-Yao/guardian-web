@@ -2,40 +2,50 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Project Guardian &bull; Global Cloud Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Project Guardian &bull; IoT Security Hub</title>
   
-  <!-- MQTT.js library from CDN for secure WebSockets communication -->
+  <!-- MQTT.js library for WebSockets communication -->
   <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+  <!-- Chart.js for Apple Health/Stocks-style real-time sensor graphs -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <style>
     :root {
-      --bg: #090d16;
-      --card-bg: #131c2e;
-      --card-border: #1e2d4a;
-      --text-main: #f8fafc;
-      --text-muted: #8b9bb4;
-      --accent: #38bdf8;
-      --accent-glow: rgba(56, 189, 248, 0.25);
-      --danger: #ef4444;
-      --danger-glow: rgba(239, 68, 68, 0.35);
-      --warning: #f59e0b;
-      --success: #10b981;
-      --success-glow: rgba(16, 185, 129, 0.25);
-      --card-radius: 14px;
+      --bg: #000000;
+      --card-bg: rgba(28, 28, 30, 0.72);
+      --card-subtle: rgba(44, 44, 46, 0.45);
+      --card-border: rgba(255, 255, 255, 0.1);
+      --card-hover-border: rgba(255, 255, 255, 0.2);
+      --text-main: #f5f5f7;
+      --text-secondary: #86868b;
+      --apple-blue: #0a84ff;
+      --apple-blue-grad: linear-gradient(180deg, #0a84ff 0%, #0071e3 100%);
+      --apple-green: #30d158;
+      --apple-red: #ff453a;
+      --apple-orange: #ff9f0a;
+      --apple-purple: #bf5af2;
+      --card-radius: 20px;
+      --pill-radius: 980px;
     }
 
     * {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
     }
 
     body {
       background-color: var(--bg);
+      background-image: 
+        radial-gradient(ellipse 80% 45% at 50% -10%, rgba(10, 132, 255, 0.13), transparent 70%),
+        radial-gradient(ellipse 60% 40% at 50% 115%, rgba(48, 209, 88, 0.08), transparent 70%);
+      background-attachment: fixed;
       color: var(--text-main);
-      padding: 1.5rem 1rem;
+      padding: 2rem 1.25rem 3.5rem;
       min-height: 100vh;
       display: flex;
       flex-direction: column;
@@ -44,39 +54,67 @@
 
     .container {
       width: 100%;
-      max-width: 860px;
+      max-width: 900px;
       display: flex;
       flex-direction: column;
-      gap: 1.25rem;
+      gap: 1.5rem;
     }
 
-    /* Header */
+    /* Top Navigation Bar */
     header {
-      background: var(--card-bg);
+      background: rgba(28, 28, 30, 0.6);
       border: 1px solid var(--card-border);
+      backdrop-filter: blur(30px) saturate(190%);
+      -webkit-backdrop-filter: blur(30px) saturate(190%);
       border-radius: var(--card-radius);
-      padding: 1.25rem 1.5rem;
+      padding: 1.1rem 1.4rem;
       display: flex;
       justify-content: space-between;
       align-items: center;
       flex-wrap: wrap;
       gap: 1rem;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+    }
+
+    .header-titles {
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
     }
 
     .header-titles h1 {
-      font-size: 1.5rem;
-      font-weight: 800;
-      letter-spacing: 0.5px;
-      color: var(--accent);
+      font-size: 1.35rem;
+      font-weight: 700;
+      letter-spacing: -0.025em;
+      color: #ffffff;
       display: flex;
       align-items: center;
-      gap: 0.5rem;
+      gap: 0.55rem;
+    }
+
+    .header-titles h1 .shield-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      background: var(--apple-blue-grad);
+      border-radius: 9px;
+      font-size: 1rem;
+      box-shadow: 0 2px 10px rgba(10, 132, 255, 0.4);
     }
 
     .header-titles p {
-      font-size: 0.85rem;
-      color: var(--text-muted);
-      margin-top: 0.25rem;
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      font-weight: 400;
+      letter-spacing: -0.01em;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
     }
 
     .cloud-pill {
@@ -84,135 +122,230 @@
       align-items: center;
       gap: 0.5rem;
       padding: 0.4rem 0.85rem;
-      border-radius: 9999px;
-      font-size: 0.8rem;
-      font-weight: 600;
-      border: 1px solid var(--card-border);
-      background: #0f172a;
+      border-radius: var(--pill-radius);
+      font-size: 0.78rem;
+      font-weight: 500;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(20px);
+      color: #d1d1d6;
     }
 
     .cloud-dot {
-      width: 8px;
-      height: 8px;
+      width: 7px;
+      height: 7px;
       border-radius: 50%;
-      background: var(--warning);
+      background: var(--apple-orange);
+      box-shadow: 0 0 6px var(--apple-orange);
+      transition: all 0.3s ease;
     }
-    .cloud-dot.connected { background: var(--success); box-shadow: 0 0 8px var(--success); }
-    .cloud-dot.disconnected { background: var(--danger); box-shadow: 0 0 8px var(--danger); }
+    .cloud-dot.connected { background: var(--apple-green); box-shadow: 0 0 8px var(--apple-green); }
+    .cloud-dot.disconnected { background: var(--apple-red); box-shadow: 0 0 8px var(--apple-red); }
 
-    /* Security Status Banner */
-    .status-banner {
+    /* Security Hero Card */
+    .hero-banner {
       background: var(--card-bg);
-      border: 2px solid var(--card-border);
-      border-radius: var(--card-radius);
-      padding: 1.5rem;
+      border: 1px solid var(--card-border);
+      backdrop-filter: blur(35px) saturate(190%);
+      -webkit-backdrop-filter: blur(35px) saturate(190%);
+      border-radius: 26px;
+      padding: 1.6rem 1.8rem;
       display: flex;
       justify-content: space-between;
       align-items: center;
       flex-wrap: wrap;
-      gap: 1rem;
+      gap: 1.5rem;
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.35);
       transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
     }
 
-    .status-banner.disarmed {
-      border-color: var(--success);
-      box-shadow: 0 0 16px var(--success-glow);
+    .hero-banner::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; right: 0; height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.22), transparent);
     }
 
-    .status-banner.armed {
-      border-color: var(--accent);
-      box-shadow: 0 0 16px var(--accent-glow);
+    .hero-banner.disarmed {
+      border-color: rgba(48, 209, 88, 0.35);
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.4), 0 0 35px rgba(48, 209, 88, 0.12);
     }
-
-    .status-banner.alarm {
-      border-color: var(--danger);
-      background: rgba(239, 68, 68, 0.08);
-      box-shadow: 0 0 24px var(--danger-glow);
-      animation: alertPulse 1.2s infinite alternate;
+    .hero-banner.armed {
+      border-color: rgba(255, 159, 10, 0.35);
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.4), 0 0 35px rgba(255, 159, 10, 0.14);
     }
-
+    .hero-banner.alarm {
+      border-color: rgba(255, 69, 58, 0.6);
+      background: rgba(255, 69, 58, 0.12);
+      box-shadow: 0 12px 40px rgba(255, 69, 58, 0.35);
+      animation: alertPulse 1.4s infinite alternate ease-in-out;
+    }
     @keyframes alertPulse {
-      0% { box-shadow: 0 0 12px var(--danger-glow); }
-      100% { box-shadow: 0 0 28px rgba(239, 68, 68, 0.6); }
+      0% { box-shadow: 0 0 15px rgba(255, 69, 58, 0.25); }
+      100% { box-shadow: 0 0 40px rgba(255, 69, 58, 0.65); }
+    }
+
+    .status-left-group {
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+    }
+
+    .status-icon-bubble {
+      width: 58px;
+      height: 58px;
+      border-radius: 19px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.7rem;
+      backdrop-filter: blur(10px);
+      box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.2);
     }
 
     .status-info h2 {
-      font-size: 1rem;
+      font-size: 0.72rem;
       text-transform: uppercase;
-      letter-spacing: 1px;
-      color: var(--text-muted);
+      letter-spacing: 0.08em;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 0.2rem;
     }
 
     .status-info .state-text {
-      font-size: 2rem;
-      font-weight: 800;
-      margin-top: 0.2rem;
+      font-size: 2.2rem;
+      font-weight: 700;
+      letter-spacing: -0.035em;
+      line-height: 1.05;
+      font-feature-settings: "tnum";
     }
 
-    /* Control Buttons */
+    .status-info small {
+      display: block;
+      font-size: 0.85rem;
+      margin-top: 0.3rem;
+      letter-spacing: -0.01em;
+    }
+
+    /* Apple-Style Action Buttons */
     .btn-group {
       display: flex;
       gap: 0.75rem;
       flex-wrap: wrap;
-      width: 100%;
     }
 
     .btn-group button {
-      flex: 1;
-      min-width: 140px;
-      padding: 0.85rem 1.25rem;
-      border: none;
-      border-radius: 10px;
-      font-weight: 700;
-      font-size: 0.95rem;
+      padding: 0.85rem 1.35rem;
+      border: 1px solid transparent;
+      border-radius: var(--pill-radius);
+      font-weight: 600;
+      font-size: 0.9rem;
+      letter-spacing: -0.01em;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 0.5rem;
-      transition: all 0.2s ease;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
     }
 
-    .btn-group button:active { transform: scale(0.97); }
+    .btn-group button:active {
+      transform: scale(0.96);
+    }
 
     .btn-arm {
-      background: #0284c7;
-      color: white;
+      background: var(--apple-blue-grad);
+      color: #ffffff;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      box-shadow: 0 4px 18px rgba(10, 132, 255, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.3);
     }
-    .btn-arm:hover { background: #0369a1; }
+    .btn-arm:hover {
+      box-shadow: 0 6px 24px rgba(10, 132, 255, 0.45);
+    }
 
     .btn-disarm {
-      background: #1e293b;
+      background: rgba(255, 255, 255, 0.08);
       color: var(--text-main);
-      border: 1px solid var(--card-border);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      backdrop-filter: blur(20px);
     }
-    .btn-disarm:hover { background: #334155; }
+    .btn-disarm:hover {
+      background: rgba(255, 255, 255, 0.14);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .btn-ignore {
+      background: rgba(255, 159, 10, 0.16);
+      color: #ffb340;
+      border: 1px solid rgba(255, 159, 10, 0.35);
+      backdrop-filter: blur(20px);
+    }
+    .btn-ignore:hover {
+      background: rgba(255, 159, 10, 0.28);
+      border-color: rgba(255, 159, 10, 0.5);
+    }
+    .btn-ignore.pulse {
+      box-shadow: 0 0 16px rgba(255, 159, 10, 0.6);
+      animation: alertPulse 1.2s infinite alternate;
+    }
 
     .btn-mute {
-      background: #6d28d9;
-      color: white;
+      background: rgba(94, 92, 230, 0.15);
+      color: #d1d0ff;
+      border: 1px solid rgba(94, 92, 230, 0.3);
+      backdrop-filter: blur(20px);
     }
-    .btn-mute:hover { background: #5b21b6; }
+    .btn-mute:hover {
+      background: rgba(94, 92, 230, 0.25);
+    }
 
-    /* Telemetry Grid */
-    .grid {
+    /* Section Headers */
+    .section-title {
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-secondary);
+      margin-left: 0.4rem;
+      margin-bottom: 0.6rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    /* Telemetry Grid Sections */
+    .dashboard-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
       gap: 1rem;
     }
 
     .card {
       background: var(--card-bg);
       border: 1px solid var(--card-border);
+      backdrop-filter: blur(30px) saturate(180%);
+      -webkit-backdrop-filter: blur(30px) saturate(180%);
       border-radius: var(--card-radius);
-      padding: 1.25rem;
+      padding: 1.35rem;
       display: flex;
       flex-direction: column;
-      gap: 0.5rem;
-      transition: transform 0.2s;
+      justify-content: space-between;
+      gap: 0.85rem;
+      box-shadow: 0 6px 24px rgba(0, 0, 0, 0.22);
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
-    .card:hover { transform: translateY(-2px); }
+    .card:hover {
+      transform: translateY(-2px);
+      border-color: var(--card-hover-border);
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+    }
 
     .card-header {
       display: flex;
@@ -221,421 +354,723 @@
     }
 
     .card-title {
-      font-size: 0.8rem;
-      font-weight: 700;
+      font-size: 0.72rem;
+      font-weight: 600;
       text-transform: uppercase;
-      letter-spacing: 0.75px;
-      color: var(--text-muted);
+      letter-spacing: 0.06em;
+      color: var(--text-secondary);
     }
 
-    .card-icon {
-      font-size: 1.2rem;
+    .card-icon-bubble {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.05rem;
     }
 
     .card-value {
-      font-size: 1.8rem;
-      font-weight: 800;
-      color: var(--text-main);
+      font-size: 2.1rem;
+      font-weight: 600;
+      letter-spacing: -0.03em;
+      color: #ffffff;
+      line-height: 1.1;
+      font-feature-settings: "tnum";
     }
 
+    /* Apple Capsule Status Tags */
     .tag {
-      display: inline-block;
-      font-size: 0.75rem;
-      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
       padding: 3px 10px;
-      border-radius: 9999px;
+      border-radius: var(--pill-radius);
       width: fit-content;
-      margin-top: 0.25rem;
+      text-transform: uppercase;
     }
 
-    .tag-ok { background: rgba(16, 185, 129, 0.15); color: var(--success); border: 1px solid var(--success); }
-    .tag-danger { background: rgba(239, 68, 68, 0.15); color: var(--danger); border: 1px solid var(--danger); }
-    .tag-warn { background: rgba(245, 158, 11, 0.15); color: var(--warning); border: 1px solid var(--warning); }
-    .tag-info { background: rgba(56, 189, 248, 0.15); color: var(--accent); border: 1px solid var(--accent); }
+    .tag-ok {
+      background: rgba(48, 209, 88, 0.14);
+      color: var(--apple-green);
+      border: 1px solid rgba(48, 209, 88, 0.28);
+    }
 
-    /* Channel Settings Bar */
+    .tag-danger {
+      background: rgba(255, 69, 58, 0.15);
+      color: var(--apple-red);
+      border: 1px solid rgba(255, 69, 58, 0.35);
+    }
+
+    .tag-warn {
+      background: rgba(255, 159, 10, 0.15);
+      color: var(--apple-orange);
+      border: 1px solid rgba(255, 159, 10, 0.35);
+    }
+
+    .tag-info {
+      background: rgba(10, 132, 255, 0.15);
+      color: var(--apple-blue);
+      border: 1px solid rgba(10, 132, 255, 0.35);
+    }
+
+    /* ==================== APPLE HEALTH / STOCKS STYLE GRAPH CARD ==================== */
+    .chart-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      backdrop-filter: blur(35px) saturate(190%);
+      -webkit-backdrop-filter: blur(35px) saturate(190%);
+      border-radius: 26px;
+      padding: 1.5rem 1.6rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.1rem;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+      width: 100%;
+    }
+
+    .chart-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+
+    .chart-titles h3 {
+      font-size: 1.1rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+    }
+
+    .chart-titles p {
+      font-size: 0.78rem;
+      color: var(--text-secondary);
+      margin-top: 0.15rem;
+    }
+
+    /* Segmented Tab Controls */
+    .segmented-control {
+      display: inline-flex;
+      background: rgba(255, 255, 255, 0.08);
+      padding: 3px;
+      border-radius: var(--pill-radius);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .segment-btn {
+      padding: 0.35rem 0.85rem;
+      border-radius: var(--pill-radius);
+      font-size: 0.76rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .segment-btn.active {
+      background: rgba(255, 255, 255, 0.2);
+      color: #ffffff;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    .chart-canvas-container {
+      position: relative;
+      width: 100%;
+      height: 240px;
+    }
+
+    .chart-stats-row {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      align-items: center;
+      padding: 0.65rem 0.95rem;
+      background: rgba(255, 255, 255, 0.04);
+      border-radius: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .stat-pill {
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+      flex: 1;
+      min-width: 80px;
+    }
+
+    .stat-pill .stat-label {
+      font-size: 0.62rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+    }
+
+    .stat-pill strong {
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: #ffffff;
+      font-feature-settings: "tnum";
+    }
+
+    /* Settings & Channel Bar */
     .settings-bar {
       background: var(--card-bg);
       border: 1px solid var(--card-border);
+      backdrop-filter: blur(25px);
+      -webkit-backdrop-filter: blur(25px);
       border-radius: var(--card-radius);
-      padding: 1rem 1.25rem;
+      padding: 1rem 1.3rem;
       display: flex;
       align-items: center;
       justify-content: space-between;
       flex-wrap: wrap;
-      gap: 0.75rem;
-      font-size: 0.85rem;
-      color: var(--text-muted);
+      gap: 0.85rem;
+      font-size: 0.82rem;
+      color: var(--text-secondary);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
     }
 
     .channel-input {
-      background: #090d16;
-      border: 1px solid var(--card-border);
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.1);
       color: var(--text-main);
-      padding: 0.4rem 0.75rem;
-      border-radius: 6px;
+      padding: 0.42rem 0.8rem;
+      border-radius: 9px;
       font-size: 0.85rem;
-      font-family: monospace;
       outline: none;
+      transition: border-color 0.2s;
     }
 
     .channel-input:focus {
-      border-color: var(--accent);
+      border-color: var(--apple-blue);
+      box-shadow: 0 0 10px rgba(10, 132, 255, 0.25);
     }
 
     footer {
       text-align: center;
-      font-size: 0.8rem;
-      color: var(--text-muted);
-      margin-top: 1.5rem;
+      font-size: 0.78rem;
+      color: var(--text-secondary);
+      margin-top: 1rem;
+      letter-spacing: -0.01em;
     }
 
-    /* Disarm Security Modal */
+    /* ==================== PASSCODE MODAL ==================== */
     .modal-backdrop {
       position: fixed;
       top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(4, 8, 16, 0.85);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
+      background: rgba(0, 0, 0, 0.68);
+      backdrop-filter: blur(40px) saturate(200%);
+      -webkit-backdrop-filter: blur(40px) saturate(200%);
       display: flex;
       align-items: center;
       justify-content: center;
       z-index: 9999;
       padding: 1rem;
-      animation: fadeIn 0.2s ease-out;
+      animation: fadeIn 0.25s ease-out;
     }
-    @keyframes fadeIn {
-      from { opacity: 0; }
-      to { opacity: 1; }
-    }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
     .modal-box {
-      background: #111827;
-      border: 1px solid #1f293d;
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.7), 0 0 30px rgba(56, 189, 248, 0.15);
-      border-radius: 18px;
+      background: rgba(30, 30, 32, 0.88);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      box-shadow: 0 35px 80px rgba(0, 0, 0, 0.85), inset 0 1px 1px rgba(255, 255, 255, 0.2);
+      border-radius: 36px;
       width: 100%;
       max-width: 320px;
-      padding: 1.5rem;
+      padding: 2rem 1.6rem 1.8rem;
       text-align: center;
       display: flex;
       flex-direction: column;
-      gap: 1rem;
-      box-sizing: border-box;
-      animation: scaleUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      align-items: center;
+      gap: 1.1rem;
+      animation: scaleUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     }
-    @keyframes scaleUp {
-      from { transform: scale(0.92); opacity: 0; }
-      to { transform: scale(1); opacity: 1; }
-    }
-    .modal-box.shake {
-      animation: shakeAnim 0.4s ease-in-out;
-    }
+    @keyframes scaleUp { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    .modal-box.shake { animation: shakeAnim 0.42s ease-in-out; }
     @keyframes shakeAnim {
       0%, 100% { transform: translateX(0); }
-      20%, 60% { transform: translateX(-8px); }
-      40%, 80% { transform: translateX(8px); }
+      20%, 60% { transform: translateX(-10px); }
+      40%, 80% { transform: translateX(10px); }
     }
-    .modal-header .modal-icon {
-      font-size: 2.2rem;
-      margin-bottom: 0.3rem;
-    }
-    .modal-header h3 {
-      font-size: 1.25rem;
-      color: var(--text-main);
-      font-weight: 700;
-      margin-bottom: 0.25rem;
-    }
-    .modal-header p {
-      font-size: 0.85rem;
-      color: var(--text-muted);
-    }
-    .pin-display-wrapper {
-      position: relative;
-      display: flex;
-      justify-content: center;
-      width: 100%;
-    }
-    .pin-input {
-      width: 100%;
-      background: #090d16;
-      border: 2px solid #1e293b;
-      border-radius: 12px;
-      color: var(--accent);
-      font-size: 1.8rem;
-      letter-spacing: 0.5rem;
-      text-align: center;
-      padding: 0.6rem 1rem;
-      font-weight: 700;
-      outline: none;
-      transition: border-color 0.2s;
-      box-sizing: border-box;
-    }
-    .pin-input:focus {
-      border-color: var(--accent);
-      box-shadow: 0 0 12px var(--accent-glow);
-    }
-    .pin-error {
-      color: #f87171;
-      font-size: 0.85rem;
-      font-weight: 600;
-      background: rgba(239, 68, 68, 0.12);
-      border: 1px solid rgba(239, 68, 68, 0.3);
-      padding: 0.4rem 0.6rem;
-      border-radius: 8px;
-    }
-    .keypad-grid {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 0.5rem;
-      width: 100%;
-      box-sizing: border-box;
-    }
-    .key-btn {
-      min-width: 0 !important;
-      width: 100% !important;
+
+    .modal-header .modal-icon-bubble {
+      width: 48px;
       height: 48px;
-      padding: 0;
-      background: #1e293b;
-      color: var(--text-main);
-      border: 1px solid #334155;
-      border-radius: 10px;
-      font-size: 1.3rem;
-      font-weight: 700;
-      cursor: pointer;
+      margin: 0 auto 0.6rem;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.14);
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: all 0.15s ease;
+      font-size: 1.4rem;
+    }
+
+    .modal-header h3 {
+      font-size: 1.25rem;
+      color: #ffffff;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+    }
+
+    .modal-header p {
+      font-size: 0.82rem;
+      color: var(--text-secondary);
+      margin-top: 0.2rem;
+    }
+
+    .pin-dots-row {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 14px;
+      height: 24px;
+      margin: 0.2rem 0;
+    }
+
+    .pin-dot {
+      width: 13px;
+      height: 13px;
+      border-radius: 50%;
+      border: 1.5px solid rgba(255, 255, 255, 0.45);
+      background: transparent;
+      transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .pin-dot.filled {
+      background: #ffffff;
+      border-color: #ffffff;
+      box-shadow: 0 0 10px rgba(255, 255, 255, 0.7);
+      transform: scale(1.1);
+    }
+
+    .pin-input-hidden {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+      height: 0; width: 0;
+    }
+
+    .pin-error {
+      color: var(--apple-red);
+      font-size: 0.82rem;
+      font-weight: 500;
+      background: rgba(255, 69, 58, 0.12);
+      border: 1px solid rgba(255, 69, 58, 0.25);
+      padding: 0.35rem 0.8rem;
+      border-radius: var(--pill-radius);
+    }
+
+    .keypad-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 68px);
+      justify-content: center;
+      gap: 12px 16px;
+      width: 100%;
+      margin: 0.3rem 0;
+    }
+
+    .key-btn {
+      width: 68px !important;
+      height: 68px !important;
+      min-width: 0 !important;
+      border-radius: 50% !important;
+      background: rgba(255, 255, 255, 0.08) !important;
+      border: 1px solid rgba(255, 255, 255, 0.08) !important;
+      color: #ffffff !important;
+      display: flex !important;
+      flex-direction: column !important;
+      align-items: center !important;
+      justify-content: center !important;
+      cursor: pointer;
       user-select: none;
-      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      transition: all 0.12s ease;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
     }
+
+    .key-btn .key-num {
+      font-size: 1.65rem;
+      font-weight: 400;
+      line-height: 1;
+    }
+
+    .key-btn .key-sub {
+      font-size: 0.58rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      color: rgba(255, 255, 255, 0.5);
+      margin-top: 2px;
+      text-transform: uppercase;
+    }
+
     .key-btn:hover {
-      background: #334155;
-      border-color: var(--accent);
-      color: var(--accent);
+      background: rgba(255, 255, 255, 0.15) !important;
     }
+
     .key-btn:active {
+      background: rgba(255, 255, 255, 0.32) !important;
       transform: scale(0.92);
-      background: #0ea5e9;
-      color: white;
     }
+
     .key-btn.key-action {
-      font-size: 1rem;
-      color: var(--text-muted);
+      background: transparent !important;
+      border: none !important;
+      box-shadow: none !important;
     }
-    .key-btn.key-action:hover {
-      color: #f87171;
-      border-color: #f87171;
+
+    .key-btn.key-action .key-num {
+      font-size: 0.95rem;
+      font-weight: 500;
+      color: rgba(255, 255, 255, 0.8);
     }
+
     .modal-btn-row {
       display: flex;
-      gap: 0.5rem;
+      gap: 0.75rem;
       width: 100%;
-      box-sizing: border-box;
+      margin-top: 0.3rem;
     }
+
     .modal-btn-row button {
       min-width: 0 !important;
       flex: 1;
-      height: 44px;
-      padding: 0 0.8rem;
-      font-size: 0.95rem;
-      border-radius: 10px;
+      height: 46px;
+      border-radius: var(--pill-radius);
+      font-size: 0.92rem;
       font-weight: 600;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      box-sizing: border-box;
+      transition: all 0.2s ease;
     }
+
     .btn-cancel {
-      background: #1e293b;
-      color: var(--text-muted);
-      border: 1px solid #334155;
+      background: rgba(255, 255, 255, 0.08);
+      color: rgba(255, 255, 255, 0.75);
+      border: 1px solid rgba(255, 255, 255, 0.12);
     }
-    .btn-cancel:hover {
-      background: #334155;
-      color: var(--text-main);
-    }
+
     .btn-submit-disarm {
-      background: linear-gradient(135deg, #ef4444, #dc2626);
+      background: linear-gradient(180deg, #ff453a 0%, #d70015 100%);
       color: white;
       border: none;
-      box-shadow: 0 4px 14px rgba(239, 68, 68, 0.4);
+      box-shadow: 0 4px 18px rgba(255, 69, 58, 0.38);
     }
-    .btn-submit-disarm:hover {
-      background: linear-gradient(135deg, #dc2626, #b91c1c);
-    }
+
     .pin-footer-tools {
-      font-size: 0.8rem;
-      color: var(--text-muted);
+      font-size: 0.78rem;
+      color: var(--text-secondary);
       display: flex;
       justify-content: center;
-      gap: 0.5rem;
+      gap: 0.6rem;
       align-items: center;
     }
+
     .pin-footer-tools a {
-      color: var(--accent);
-      text-decoration: underline;
+      color: var(--apple-blue);
+      text-decoration: none;
+      font-weight: 500;
       cursor: pointer;
+    }
+    .pin-footer-tools a:hover {
+      text-decoration: underline;
     }
   </style>
 </head>
 <body>
 
 <div class="container">
-  <!-- Header -->
+  <!-- Top Navigation Bar -->
   <header>
     <div class="header-titles">
-      <h1>&#128737; PROJECT GUARDIAN</h1>
-      <p>Global IoT Remote Security & Telemetry Hub</p>
+      <h1>
+        <span class="shield-icon">&#128737;&#65039;</span>
+        PROJECT GUARDIAN
+      </h1>
+      <p>ESP32-S3 IoT Security &bull; TinyML &amp; Anomaly Intelligence</p>
     </div>
-    <div class="cloud-pill">
-      <div id="cloudDot" class="cloud-dot"></div>
-      <span id="cloudStatus">Connecting to Cloud...</span>
+    <div class="header-right">
+      <div class="cloud-pill">
+        <div id="cloudDot" class="cloud-dot"></div>
+        <span id="cloudStatus">Connecting to Cloud...</span>
+      </div>
     </div>
   </header>
 
-  <!-- Security State Banner -->
-  <div id="statusBanner" class="status-banner disarmed">
-    <div class="status-info">
-      <h2>System Security State</h2>
-      <div id="stateText" class="state-text" style="color: var(--success);">DISARMED</div>
-      <small id="subStateText" style="color: var(--text-muted);">Ready & Standby</small>
+  <!-- Security Hero Banner with Integrated Quick Controls -->
+  <div id="statusBanner" class="hero-banner disarmed">
+    <div class="status-left-group">
+      <div id="statusIconBubble" class="status-icon-bubble">&#128737;&#65039;</div>
+      <div class="status-info">
+        <h2>Security State</h2>
+        <div id="stateText" class="state-text" style="color: var(--apple-green);">DISARMED</div>
+        <small id="subStateText" style="color: var(--text-secondary);">Standby &bull; Monitoring Environment</small>
+      </div>
     </div>
-    <div id="alarmBadge" style="display:none;" class="tag tag-danger">SIREN ACTIVE</div>
+    
+    <div style="display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap;">
+      <div id="alarmBadge" style="display:none;" class="tag tag-danger">SIREN ACTIVE</div>
+      <div class="btn-group">
+        <button class="btn-arm" onclick="sendCommand('ARM')">&#128274; ARM</button>
+        <button class="btn-disarm" onclick="openPasscodeModal('DISARM')">&#128275; DISARM</button>
+        <button class="btn-ignore" id="btnIgnoreAlarm" onclick="openPasscodeModal('IGNORE')">&#9888;&#65039; IGNORE</button>
+        <button class="btn-mute" onclick="sendCommand('MUTE')">&#128263; MUTE</button>
+      </div>
+    </div>
   </div>
 
-  <!-- Command Actions -->
-  <div class="btn-group">
-    <button class="btn-arm" onclick="sendCommand('ARM')">&#128274; ARM SYSTEM</button>
-    <button class="btn-disarm" onclick="openDisarmModal()">&#128275; DISARM SYSTEM</button>
-    <button class="btn-mute" onclick="sendCommand('MUTE')">&#128263; TOGGLE MUTE</button>
+  <!-- SECTION 1: PERIMETER & SECURITY -->
+  <div>
+    <div class="section-title">&#128737;&#65039; PERIMETER &amp; MOTION DEFENSE</div>
+    <div class="dashboard-grid">
+      <!-- mmWave Radar Card -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Presence (LD2412 Radar)</span>
+          <div class="card-icon-bubble">&#128225;</div>
+        </div>
+        <div id="valRadar" class="card-value">VACANT</div>
+        <span id="tagRadar" class="tag tag-ok">ROOM CLEAR</span>
+      </div>
+
+      <!-- Orientation & Tamper -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Orientation (MPU-6050)</span>
+          <div class="card-icon-bubble">&#129517;</div>
+        </div>
+        <div id="valTilt" class="card-value" style="font-size: 1.55rem;">Pitch: 0&deg; | Roll: 0&deg;</div>
+        <span id="tagTamper" class="tag tag-ok">SECURE &amp; LEVEL</span>
+      </div>
+    </div>
   </div>
 
-  <!-- Telemetry Grid -->
-  <div class="grid">
-    <!-- mmWave Radar Card -->
-    <div class="card" style="grid-column: span 1;">
-      <div class="card-header">
-        <span class="card-title">mmWave Radar (LD2412)</span>
-        <span class="card-icon">&#128225;</span>
+  <!-- SECTION 2: ON-DEVICE AI INTELLIGENCE -->
+  <div>
+    <div class="section-title">&#129504; ON-DEVICE TINYML &amp; ANOMALY AI</div>
+    <div class="dashboard-grid">
+      <!-- AI #1: TinyML Motion & Bump Classifier -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">AI #1 &bull; Motion Classifier</span>
+          <div class="card-icon-bubble">&#129504;</div>
+        </div>
+        <div id="valAiMotion" class="card-value">STILL (99%)</div>
+        <span id="tagAiMotion" class="tag tag-info">BUMPS FILTERED: 0</span>
       </div>
-      <div id="valRadar" class="card-value">VACANT</div>
-      <span id="tagRadar" class="tag tag-ok">ROOM CLEAR</span>
+
+      <!-- AI #2: Self-Learning Environmental Anomaly Engine -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">AI #2 &bull; Anomaly Probability</span>
+          <div class="card-icon-bubble">&#10024;</div>
+        </div>
+        <div id="valAiAnomaly" class="card-value">0 %</div>
+        <span id="tagAiAnomaly" class="tag tag-info">LEARNING BASELINE...</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 3: CLIMATE & SAFETY -->
+  <div>
+    <div class="section-title">&#127777;&#65039; CLIMATE &amp; HAZARD SENSORS</div>
+    <div class="dashboard-grid">
+      <!-- Temperature Card -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Temperature</span>
+          <div class="card-icon-bubble">&#127777;&#65039;</div>
+        </div>
+        <div id="valTemp" class="card-value">-- &deg;C</div>
+        <span id="tagTemp" class="tag tag-ok">NORMAL</span>
+      </div>
+
+      <!-- Humidity Card -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Humidity</span>
+          <div class="card-icon-bubble">&#128167;</div>
+        </div>
+        <div id="valHum" class="card-value">-- %</div>
+        <span id="tagHum" class="tag tag-ok">NORMAL</span>
+      </div>
+
+      <!-- Flame Detection Card -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Flame Sensor</span>
+          <div class="card-icon-bubble">&#128293;</div>
+        </div>
+        <div id="valFlame" class="card-value">--</div>
+        <span id="tagFlame" class="tag tag-ok">SAFE &bull; NO FIRE</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 4: LIVE STATISTICAL GRAPH (Apple Health/Stocks Style) -->
+  <div class="chart-card">
+    <div class="chart-toolbar">
+      <div class="chart-titles">
+        <h3>&#128200; Sensor Analytics &amp; Trends</h3>
+        <p id="chartStatSub">Continuous live telemetry &bull; Select timeframe and metric</p>
+      </div>
+
+      <div style="display:flex; gap:0.6rem; flex-wrap:wrap; align-items:center;">
+        <!-- Timeframe Switcher (Apple Stocks style) -->
+        <div class="segmented-control" id="timeframeControl">
+          <button type="button" class="segment-btn" onclick="switchTimeframe('1m')">1M</button>
+          <button type="button" class="segment-btn active" onclick="switchTimeframe('5m')">5M</button>
+          <button type="button" class="segment-btn" onclick="switchTimeframe('15m')">15M</button>
+          <button type="button" class="segment-btn" onclick="switchTimeframe('1h')">1H</button>
+          <button type="button" class="segment-btn" onclick="switchTimeframe('all')">ALL</button>
+        </div>
+
+        <!-- Metric Switcher -->
+        <div class="segmented-control" id="metricControl">
+          <button type="button" class="segment-btn active" onclick="switchGraphMetric('temp')">Temperature</button>
+          <button type="button" class="segment-btn" onclick="switchGraphMetric('hum')">Humidity</button>
+          <button type="button" class="segment-btn" onclick="switchGraphMetric('anomaly')">AI Anomaly</button>
+          <button type="button" class="segment-btn" onclick="switchGraphMetric('flame')">Flame IR</button>
+        </div>
+      </div>
     </div>
 
-    <!-- Flame Detection Card -->
-    <div class="card">
-      <div class="card-header">
-        <span class="card-title">Flame Sensor</span>
-        <span class="card-icon">&#128293;</span>
+    <!-- Live Stats Bar (Apple Health style) -->
+    <div class="chart-stats-row">
+      <div class="stat-pill">
+        <span class="stat-label">CURRENT</span>
+        <strong id="statCurrent">--</strong>
       </div>
-      <div id="valFlame" class="card-value">--</div>
-      <span id="tagFlame" class="tag tag-ok">NO FIRE</span>
+      <div class="stat-pill">
+        <span class="stat-label">MIN</span>
+        <strong id="statMin">--</strong>
+      </div>
+      <div class="stat-pill">
+        <span class="stat-label">AVG</span>
+        <strong id="statAvg">--</strong>
+      </div>
+      <div class="stat-pill">
+        <span class="stat-label">MAX</span>
+        <strong id="statMax">--</strong>
+      </div>
+      <div class="stat-pill">
+        <span class="stat-label">SAMPLES</span>
+        <strong id="statPoints">0</strong>
+      </div>
     </div>
 
-    <!-- Temperature Card -->
-    <div class="card">
-      <div class="card-header">
-        <span class="card-title">Temperature</span>
-        <span class="card-icon">&#127777;&#65039;</span>
-      </div>
-      <div id="valTemp" class="card-value">-- &deg;C</div>
-      <span id="tagTemp" class="tag tag-ok">NORMAL</span>
-    </div>
-
-    <!-- Humidity Card -->
-    <div class="card">
-      <div class="card-header">
-        <span class="card-title">Humidity</span>
-        <span class="card-icon">&#128167;</span>
-      </div>
-      <div id="valHum" class="card-value">-- %</div>
-      <span id="tagHum" class="tag tag-ok">NORMAL</span>
-    </div>
-
-    <!-- Orientation & Tamper -->
-    <div class="card">
-      <div class="card-header">
-        <span class="card-title">Orientation &amp; Tamper (MPU-6050)</span>
-        <span class="card-icon">&#129517;</span>
-      </div>
-      <div id="valTilt" class="card-value">Pitch: 0&deg; | Roll: 0&deg;</div>
-      <span id="tagTamper" class="tag tag-ok">SECURE &amp; MOUNTED</span>
-    </div>
-
-    <!-- AI #1: TinyML Motion & Bump Classifier -->
-    <div class="card">
-      <div class="card-header">
-        <span class="card-title">AI #1 &bull; TinyML Motion Classifier</span>
-        <span class="card-icon">&#129504;</span>
-      </div>
-      <div id="valAiMotion" class="card-value">STILL (99%)</div>
-      <span id="tagAiMotion" class="tag tag-info">BUMPS FILTERED: 0</span>
-    </div>
-
-    <!-- AI #2: Self-Learning Environmental Anomaly Engine -->
-    <div class="card" style="grid-column: span 1;">
-      <div class="card-header">
-        <span class="card-title">AI #2 &bull; Env Anomaly Score</span>
-        <span class="card-icon">&#10024;</span>
-      </div>
-      <div id="valAiAnomaly" class="card-value">0 %</div>
-      <span id="tagAiAnomaly" class="tag tag-info">LEARNING BASELINE...</span>
+    <!-- Chart Canvas -->
+    <div class="chart-canvas-container">
+      <canvas id="telemetryChart"></canvas>
     </div>
   </div>
 
   <!-- Settings / Device Channel Bar -->
   <div class="settings-bar">
     <div>
-      <strong>Device ID Channel:</strong>
+      <strong style="color:#ffffff;">Device ID Channel:</strong>
       <input type="text" id="deviceIdInput" class="channel-input" value="guardian_hub_01" onchange="updateChannel()">
     </div>
     <div id="lastSeen">Last seen: Waiting for ESP32...</div>
   </div>
 
   <footer>
-    Project Guardian &bull; Free Global IoT Cloud Interface via GitHub Pages & MQTT
+    Project Guardian &bull; ESP32-S3 IoT Cloud Dashboard
   </footer>
 </div>
 
-<!-- Disarm Security PIN Modal Dialog -->
+<!-- ==================== PASSCODE DISARM MODAL ==================== -->
 <div id="disarmModal" class="modal-backdrop" style="display:none;" onclick="handleBackdropClick(event)">
   <div class="modal-box">
     <div class="modal-header">
-      <div class="modal-icon">&#128274;</div>
-      <h3>Security PIN Required</h3>
-      <p>Enter your security PIN to disarm the alarm.</p>
+      <div class="modal-icon-bubble" id="modalIconBubble">&#128274;</div>
+      <h3 id="modalTitle">Enter Passcode</h3>
+      <p id="modalDesc">Enter security PIN to disarm alarm.</p>
     </div>
 
-    <div class="pin-display-wrapper">
-      <input type="password" id="pinInput" class="pin-input" maxlength="8" placeholder="••••" readonly />
-    </div>
-    <div id="pinErrorMsg" class="pin-error" style="display:none;">&#9888; Incorrect PIN! Access Denied.</div>
+    <!-- Dynamic Passcode Dots -->
+    <div class="pin-dots-row" id="pinDotsRow"></div>
 
-    <!-- Touch Keypad -->
+    <input type="password" id="pinInput" class="pin-input-hidden" maxlength="8" readonly />
+    <div id="pinErrorMsg" class="pin-error" style="display:none;">&#9888; Incorrect Passcode</div>
+
+    <!-- Circular Dial Keypad -->
     <div class="keypad-grid">
-      <button type="button" class="key-btn" onclick="pressPin('1')">1</button>
-      <button type="button" class="key-btn" onclick="pressPin('2')">2</button>
-      <button type="button" class="key-btn" onclick="pressPin('3')">3</button>
-      <button type="button" class="key-btn" onclick="pressPin('4')">4</button>
-      <button type="button" class="key-btn" onclick="pressPin('5')">5</button>
-      <button type="button" class="key-btn" onclick="pressPin('6')">6</button>
-      <button type="button" class="key-btn" onclick="pressPin('7')">7</button>
-      <button type="button" class="key-btn" onclick="pressPin('8')">8</button>
-      <button type="button" class="key-btn" onclick="pressPin('9')">9</button>
-      <button type="button" class="key-btn key-action" onclick="clearPin()">CLR</button>
-      <button type="button" class="key-btn" onclick="pressPin('0')">0</button>
-      <button type="button" class="key-btn key-action" onclick="backspacePin()">&#9003;</button>
+      <button type="button" class="key-btn" onclick="pressPin('1')">
+        <span class="key-num">1</span>
+        <span class="key-sub">&nbsp;</span>
+      </button>
+      <button type="button" class="key-btn" onclick="pressPin('2')">
+        <span class="key-num">2</span>
+        <span class="key-sub">ABC</span>
+      </button>
+      <button type="button" class="key-btn" onclick="pressPin('3')">
+        <span class="key-num">3</span>
+        <span class="key-sub">DEF</span>
+      </button>
+
+      <button type="button" class="key-btn" onclick="pressPin('4')">
+        <span class="key-num">4</span>
+        <span class="key-sub">GHI</span>
+      </button>
+      <button type="button" class="key-btn" onclick="pressPin('5')">
+        <span class="key-num">5</span>
+        <span class="key-sub">JKL</span>
+      </button>
+      <button type="button" class="key-btn" onclick="pressPin('6')">
+        <span class="key-num">6</span>
+        <span class="key-sub">MNO</span>
+      </button>
+
+      <button type="button" class="key-btn" onclick="pressPin('7')">
+        <span class="key-num">7</span>
+        <span class="key-sub">PQRS</span>
+      </button>
+      <button type="button" class="key-btn" onclick="pressPin('8')">
+        <span class="key-num">8</span>
+        <span class="key-sub">TUV</span>
+      </button>
+      <button type="button" class="key-btn" onclick="pressPin('9')">
+        <span class="key-num">9</span>
+        <span class="key-sub">WXYZ</span>
+      </button>
+
+      <button type="button" class="key-btn key-action" onclick="clearPin()">
+        <span class="key-num">Clear</span>
+      </button>
+      <button type="button" class="key-btn" onclick="pressPin('0')">
+        <span class="key-num">0</span>
+        <span class="key-sub">&nbsp;</span>
+      </button>
+      <button type="button" class="key-btn key-action" onclick="backspacePin()">
+        <span class="key-num">&#9003;</span>
+      </button>
     </div>
 
     <div class="modal-btn-row">
       <button type="button" class="btn-cancel" onclick="closeDisarmModal()">Cancel</button>
-      <button type="button" class="btn-submit-disarm" onclick="submitDisarmPin()">&#128275; Disarm</button>
+      <button type="button" class="btn-submit-disarm" id="modalSubmitBtn" onclick="submitDisarmPin()">&#128275; Disarm</button>
     </div>
 
     <div class="pin-footer-tools">
-      <span>Default PIN: <strong>1234</strong></span>
+      <span id="pinHintText">Passcode: 4 digits (Default: <strong>1234</strong>)</span>
       &bull;
       <a href="javascript:void(0)" onclick="changeSecurityPin()">Change PIN</a>
     </div>
@@ -643,21 +1078,234 @@
 </div>
 
 <script>
-  // Configuration: Default channel matches ESP32 code
   let deviceId = localStorage.getItem('guardian_device_id') || 'guardian_hub_01';
   document.getElementById('deviceIdInput').value = deviceId;
 
-  // Cloud MQTT Broker (Secure WebSockets over WSS)
-  // Using public high-availability EMQX broker - zero sign up required!
   const BROKER_URL = 'wss://broker.emqx.io:8084/mqtt';
-  
   let client = null;
 
+  // ==================== REAL-TIME TELEMETRY GRAPH ENGINE ====================
+  const MAX_STORAGE_POINTS = 3600; // Store up to 1 full hour of live 1Hz telemetry
+  let activeMetric = 'temp';       // 'temp', 'hum', 'anomaly', 'flame'
+  let activeTimeframe = '5m';      // '1m', '5m', '15m', '1h', 'all'
+  
+  const timeframeLimits = {
+    '1m': 60,
+    '5m': 300,
+    '15m': 900,
+    '1h': 3600,
+    'all': Infinity
+  };
+
+  const historyData = {
+    labels: [],
+    temp: [],
+    hum: [],
+    anomaly: [],
+    flame: []
+  };
+
+  const metricConfigs = {
+    temp: {
+      label: 'Temperature (°C)',
+      color: '#0a84ff',
+      gradientStart: 'rgba(10, 132, 255, 0.28)',
+      unit: '°C'
+    },
+    hum: {
+      label: 'Humidity (%)',
+      color: '#30d158',
+      gradientStart: 'rgba(48, 209, 88, 0.28)',
+      unit: '%'
+    },
+    anomaly: {
+      label: 'AI Anomaly Score (%)',
+      color: '#bf5af2',
+      gradientStart: 'rgba(191, 90, 242, 0.28)',
+      unit: '%'
+    },
+    flame: {
+      label: 'Flame IR Raw (Lower = Fire Hazard)',
+      color: '#ff9f0a',
+      gradientStart: 'rgba(255, 159, 10, 0.28)',
+      unit: 'ADC'
+    }
+  };
+
+  let chartInstance = null;
+
+  function initChart() {
+    const ctx = document.getElementById('telemetryChart').getContext('2d');
+    const cfg = metricConfigs[activeMetric];
+
+    const gradient = ctx.createLinearGradient(0, 0, 0, 220);
+    gradient.addColorStop(0, cfg.gradientStart);
+    gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+
+    chartInstance = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: [],
+        datasets: [{
+          label: cfg.label,
+          data: [],
+          borderColor: cfg.color,
+          backgroundColor: gradient,
+          fill: true,
+          tension: 0.38,
+          borderWidth: 2.5,
+          pointRadius: 2,
+          pointBackgroundColor: cfg.color,
+          pointHoverRadius: 6
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: { duration: 300 },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: 'rgba(28, 28, 30, 0.95)',
+            titleColor: '#86868b',
+            bodyColor: '#ffffff',
+            borderColor: 'rgba(255, 255, 255, 0.15)',
+            borderWidth: 1,
+            padding: 10,
+            cornerRadius: 12
+          }
+        },
+        scales: {
+          x: {
+            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+            ticks: {
+              color: '#86868b',
+              font: { size: 10 },
+              maxTicksLimit: 8
+            }
+          },
+          y: {
+            grid: { color: 'rgba(255, 255, 255, 0.06)' },
+            ticks: { color: '#86868b', font: { size: 11 } }
+          }
+        }
+      }
+    });
+
+    updateChartRender();
+  }
+
+  function switchTimeframe(tf) {
+    activeTimeframe = tf;
+    const btns = document.querySelectorAll('#timeframeControl .segment-btn');
+    btns.forEach(btn => {
+      btn.classList.toggle('active', btn.getAttribute('onclick').includes(`'${tf}'`));
+    });
+
+    const sub = document.getElementById('chartStatSub');
+    if (sub) {
+      const names = { '1m': 'Last 1 Minute', '5m': 'Last 5 Minutes', '15m': 'Last 15 Minutes', '1h': 'Last 1 Hour', 'all': 'All Session History' };
+      sub.innerText = `Showing ${names[tf]} (${metricConfigs[activeMetric].label})`;
+    }
+
+    updateChartRender();
+  }
+
+  function switchGraphMetric(metric) {
+    activeMetric = metric;
+    const btns = document.querySelectorAll('#metricControl .segment-btn');
+    btns.forEach(btn => {
+      btn.classList.toggle('active', btn.getAttribute('onclick').includes(`'${metric}'`));
+    });
+
+    const cfg = metricConfigs[activeMetric];
+    const ctx = document.getElementById('telemetryChart').getContext('2d');
+    const gradient = ctx.createLinearGradient(0, 0, 0, 220);
+    gradient.addColorStop(0, cfg.gradientStart);
+    gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+
+    chartInstance.data.datasets[0].label = cfg.label;
+    chartInstance.data.datasets[0].borderColor = cfg.color;
+    chartInstance.data.datasets[0].backgroundColor = gradient;
+    chartInstance.data.datasets[0].pointBackgroundColor = cfg.color;
+
+    const sub = document.getElementById('chartStatSub');
+    if (sub) {
+      const names = { '1m': 'Last 1 Minute', '5m': 'Last 5 Minutes', '15m': 'Last 15 Minutes', '1h': 'Last 1 Hour', 'all': 'All Session History' };
+      sub.innerText = `Showing ${names[activeTimeframe]} (${cfg.label})`;
+    }
+
+    updateChartRender();
+  }
+
+  function updateChartRender() {
+    if (!chartInstance) return;
+
+    const limit = timeframeLimits[activeTimeframe];
+    const totalPoints = historyData[activeMetric].length;
+    const sliceCount = (limit === Infinity) ? totalPoints : Math.min(limit, totalPoints);
+    const startIdx = totalPoints - sliceCount;
+
+    const visibleLabels = historyData.labels.slice(startIdx);
+    const visibleData = historyData[activeMetric].slice(startIdx);
+
+    chartInstance.data.labels = visibleLabels;
+    chartInstance.data.datasets[0].data = visibleData;
+    chartInstance.update('none');
+
+    // Live Statistics (Current, Min, Avg, Max, Samples)
+    if (visibleData.length > 0) {
+      const cur = visibleData[visibleData.length - 1];
+      let min = visibleData[0];
+      let max = visibleData[0];
+      let sum = 0;
+
+      for (let v of visibleData) {
+        if (v < min) min = v;
+        if (v > max) max = v;
+        sum += v;
+      }
+      const avg = sum / visibleData.length;
+      const unit = metricConfigs[activeMetric].unit;
+
+      document.getElementById('statCurrent').innerText = cur.toFixed(1) + (unit ? ' ' + unit : '');
+      document.getElementById('statMin').innerText = min.toFixed(1) + (unit ? ' ' + unit : '');
+      document.getElementById('statAvg').innerText = avg.toFixed(1) + (unit ? ' ' + unit : '');
+      document.getElementById('statMax').innerText = max.toFixed(1) + (unit ? ' ' + unit : '');
+      document.getElementById('statPoints').innerText = visibleData.length;
+    } else {
+      document.getElementById('statCurrent').innerText = '--';
+      document.getElementById('statMin').innerText = '--';
+      document.getElementById('statAvg').innerText = '--';
+      document.getElementById('statMax').innerText = '--';
+      document.getElementById('statPoints').innerText = '0';
+    }
+  }
+
+  function pushChartData(timeLabel, temp, hum, anomaly, flame) {
+    if (historyData.labels.length >= MAX_STORAGE_POINTS) {
+      historyData.labels.shift();
+      historyData.temp.shift();
+      historyData.hum.shift();
+      historyData.anomaly.shift();
+      historyData.flame.shift();
+    }
+
+    historyData.labels.push(timeLabel);
+    historyData.temp.push(temp);
+    historyData.hum.push(hum);
+    historyData.anomaly.push(anomaly);
+    historyData.flame.push(flame);
+
+    updateChartRender();
+  }
+
+  // ==================== MQTT CLIENT ====================
   function initMQTT() {
     const cloudDot = document.getElementById('cloudDot');
     const cloudStatus = document.getElementById('cloudStatus');
 
-    cloudStatus.innerText = 'Connecting to Global Cloud...';
+    cloudStatus.innerText = 'Connecting to Cloud...';
     cloudDot.className = 'cloud-dot';
 
     const clientId = 'web_guardian_' + Math.random().toString(16).substr(2, 8);
@@ -670,10 +1318,9 @@
 
     client.on('connect', () => {
       cloudDot.className = 'cloud-dot connected';
-      cloudStatus.innerText = 'Global Cloud Online';
+      cloudStatus.innerText = 'Cloud Broker Online';
       console.log('Connected to MQTT Cloud Broker!');
 
-      // Subscribe to telemetry, state, and alarms
       client.subscribe(`${deviceId}/telemetry`);
       client.subscribe(`${deviceId}/state`);
       client.subscribe(`${deviceId}/alarm`);
@@ -721,111 +1368,154 @@
     const banner = document.getElementById('statusBanner');
     const stateText = document.getElementById('stateText');
     const subText = document.getElementById('subStateText');
+    const iconBubble = document.getElementById('statusIconBubble');
 
     if (state === 'ARMED') {
-      banner.className = 'status-banner armed';
+      banner.className = 'hero-banner armed';
       stateText.innerText = 'ARMED';
-      stateText.style.color = 'var(--accent)';
+      stateText.style.color = 'var(--apple-orange)';
       subText.innerText = 'Perimeter & Sensors Active';
+      iconBubble.innerText = '🔒';
     } else if (state === 'ARMING') {
-      banner.className = 'status-banner armed';
-      stateText.innerText = 'ARMING (EXIT DELAY)';
-      stateText.style.color = 'var(--warning)';
-      subText.innerText = 'Clear area within 10 seconds';
+      banner.className = 'hero-banner armed';
+      stateText.innerText = 'ARMING (DELAY)';
+      stateText.style.color = 'var(--apple-orange)';
+      subText.innerText = 'Clear area within exit timer';
+      iconBubble.innerText = '⏳';
     } else {
-      banner.className = 'status-banner disarmed';
+      banner.className = 'hero-banner disarmed';
       stateText.innerText = 'DISARMED';
-      stateText.style.color = 'var(--success)';
-      subText.innerText = 'Standby / Room Presence Mode';
+      stateText.style.color = 'var(--apple-green)';
+      subText.innerText = 'Standby • Monitoring Environment';
+      iconBubble.innerText = '🛡️';
     }
   }
 
   function handleAlarmState(alarm) {
     const banner = document.getElementById('statusBanner');
     const badge = document.getElementById('alarmBadge');
+    const iconBubble = document.getElementById('statusIconBubble');
+    const btnIgnore = document.getElementById('btnIgnoreAlarm');
 
     if (alarm !== 'NORMAL' && alarm !== 'CLEAR') {
-      banner.className = 'status-banner alarm';
+      banner.className = 'hero-banner alarm';
       badge.style.display = 'inline-block';
       badge.innerText = `ALARM: ${alarm}!`;
+      iconBubble.innerText = '🚨';
+      if (btnIgnore) btnIgnore.classList.add('pulse');
     } else {
       badge.style.display = 'none';
+      if (btnIgnore) btnIgnore.classList.remove('pulse');
     }
   }
 
   function updateTelemetry(d) {
-    document.getElementById('lastSeen').innerText = 'Last update: ' + new Date().toLocaleTimeString();
+    try {
+      console.log('[MQTT] Telemetry received:', d);
+      const nowTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      const lastSeenEl = document.getElementById('lastSeen');
+      if (lastSeenEl) lastSeenEl.innerText = 'Last update: ' + nowTime;
 
-    // Temperature & Humidity
-    document.getElementById('valTemp').innerHTML = d.temp.toFixed(1) + ' &deg;C';
-    const tagTemp = document.getElementById('tagTemp');
-    tagTemp.innerText = (d.temp >= 38.0) ? 'HIGH TEMP' : 'NORMAL';
-    tagTemp.className = 'tag ' + (d.temp >= 38.0 ? 'tag-danger' : 'tag-ok');
+      const tempNum = (typeof d.temp === 'number') ? d.temp : (parseFloat(d.temp) || 0);
+      const humNum = (typeof d.hum === 'number') ? d.hum : (parseFloat(d.hum) || 0);
+      const flameNum = (typeof d.flame === 'number') ? d.flame : (parseInt(d.flame) || 0);
+      const anomalyNum = (typeof d.aiScore === 'number') ? d.aiScore : (parseInt(d.aiScore) || 0);
 
-    document.getElementById('valHum').innerText = d.hum.toFixed(0) + ' %';
-    const tagHum = document.getElementById('tagHum');
-    tagHum.innerText = (d.hum < 20.0) ? 'LOW HUMIDITY' : 'NORMAL';
-    tagHum.className = 'tag ' + (d.hum < 20.0 ? 'tag-warn' : 'tag-ok');
-
-    // mmWave Radar
-    const valRadar = document.getElementById('valRadar');
-    const tagRadar = document.getElementById('tagRadar');
-    if (d.intrusion) {
-      valRadar.innerText = 'INTRUDER!';
-      tagRadar.innerText = 'ALARM TRIGGERED';
-      tagRadar.className = 'tag tag-danger';
-    } else if (d.mmwave) {
-      valRadar.innerText = 'OCCUPIED';
-      tagRadar.innerText = 'HUMAN DETECTED';
-      tagRadar.className = 'tag tag-warn';
-    } else {
-      valRadar.innerText = 'VACANT';
-      tagRadar.innerText = 'ROOM CLEAR';
-      tagRadar.className = 'tag tag-ok';
-    }
-
-    // Flame
-    document.getElementById('valFlame').innerText = d.flame;
-    const tagFlame = document.getElementById('tagFlame');
-    tagFlame.innerText = d.flame < 1500 ? 'FIRE HAZARD!' : 'SAFE';
-    tagFlame.className = 'tag ' + (d.flame < 1500 ? 'tag-danger' : 'tag-ok');
-
-    // MPU6050
-    document.getElementById('valTilt').innerText =
-      `Pitch (X): ${d.angleX.toFixed(0)}°  |  Roll (Y): ${d.angleY.toFixed(0)}°`;
-    const tagTamper = document.getElementById('tagTamper');
-    tagTamper.innerText = d.tamper ? 'TAMPER ALARM!' : 'SECURE';
-    tagTamper.className = 'tag ' + (d.tamper ? 'tag-danger' : 'tag-ok');
-
-    // AI #1: TinyML Motion Classifier
-    if (d.aiMotion !== undefined) {
-      const valAiMotion = document.getElementById('valAiMotion');
-      const tagAiMotion = document.getElementById('tagAiMotion');
-      valAiMotion.innerText = `${d.aiMotion} (${d.aiConf || 99}%)`;
-      tagAiMotion.innerText = `BUMPS FILTERED: ${d.aiBumps || 0}`;
-      if (d.aiMotion === 'TAMPER') {
-        tagAiMotion.className = 'tag tag-danger';
-      } else if (d.aiMotion === 'BUMP') {
-        tagAiMotion.className = 'tag tag-warn';
-      } else {
-        tagAiMotion.className = 'tag tag-info';
+      // Temperature & Humidity
+      const valTemp = document.getElementById('valTemp');
+      const tagTemp = document.getElementById('tagTemp');
+      if (valTemp) valTemp.innerHTML = tempNum.toFixed(1) + ' &deg;C';
+      if (tagTemp) {
+        tagTemp.innerText = (tempNum >= 38.0) ? 'HIGH TEMP' : 'NORMAL';
+        tagTemp.className = 'tag ' + (tempNum >= 38.0 ? 'tag-danger' : 'tag-ok');
       }
-    }
 
-    // AI #2: Environmental Anomaly Detector
-    if (d.aiScore !== undefined) {
-      const valAiAnomaly = document.getElementById('valAiAnomaly');
-      const tagAiAnomaly = document.getElementById('tagAiAnomaly');
-      valAiAnomaly.innerText = `${d.aiScore.toFixed(0)} %`;
-      const baseInfo = d.baseTemp ? ` (Base: ${d.baseTemp.toFixed(1)}°C / ${d.baseHum.toFixed(0)}%)` : '';
-      tagAiAnomaly.innerText = `${d.aiEnv || 'NORMAL'}${baseInfo}`;
-      if (d.envAnomaly || d.aiEnv === 'ANOMALY') {
-        tagAiAnomaly.className = 'tag tag-danger';
-      } else if (d.aiEnv === 'UNUSUAL') {
-        tagAiAnomaly.className = 'tag tag-warn';
-      } else {
-        tagAiAnomaly.className = 'tag tag-ok';
+      const valHum = document.getElementById('valHum');
+      const tagHum = document.getElementById('tagHum');
+      if (valHum) valHum.innerText = humNum.toFixed(0) + ' %';
+      if (tagHum) {
+        tagHum.innerText = (humNum < 20.0) ? 'LOW HUMIDITY' : 'NORMAL';
+        tagHum.className = 'tag ' + (humNum < 20.0 ? 'tag-warn' : 'tag-ok');
       }
+
+      // mmWave Radar
+      const valRadar = document.getElementById('valRadar');
+      const tagRadar = document.getElementById('tagRadar');
+      if (valRadar && tagRadar) {
+        if (d.intrusion) {
+          valRadar.innerText = 'INTRUDER!';
+          tagRadar.innerText = 'ALARM TRIGGERED';
+          tagRadar.className = 'tag tag-danger';
+        } else if (d.mmwave) {
+          valRadar.innerText = 'OCCUPIED';
+          tagRadar.innerText = 'HUMAN DETECTED';
+          tagRadar.className = 'tag tag-warn';
+        } else {
+          valRadar.innerText = 'VACANT';
+          tagRadar.innerText = 'ROOM CLEAR';
+          tagRadar.className = 'tag tag-ok';
+        }
+      }
+
+      // Flame
+      const valFlame = document.getElementById('valFlame');
+      const tagFlame = document.getElementById('tagFlame');
+      if (valFlame) valFlame.innerText = flameNum;
+      if (tagFlame) {
+        tagFlame.innerText = flameNum < 1500 ? 'FIRE HAZARD!' : 'SAFE • NO FIRE';
+        tagFlame.className = 'tag ' + (flameNum < 1500 ? 'tag-danger' : 'tag-ok');
+      }
+
+      // MPU6050
+      const valTilt = document.getElementById('valTilt');
+      const tagTamper = document.getElementById('tagTamper');
+      const angleX = (typeof d.angleX === 'number') ? d.angleX.toFixed(0) : '0';
+      const angleY = (typeof d.angleY === 'number') ? d.angleY.toFixed(0) : '0';
+      if (valTilt) valTilt.innerText = `Pitch: ${angleX}° | Roll: ${angleY}°`;
+      if (tagTamper) {
+        tagTamper.innerText = d.tamper ? 'TAMPER ALARM!' : 'SECURE & LEVEL';
+        tagTamper.className = 'tag ' + (d.tamper ? 'tag-danger' : 'tag-ok');
+      }
+
+      // AI #1: TinyML Motion Classifier
+      if (d.aiMotion !== undefined) {
+        const valAiMotion = document.getElementById('valAiMotion');
+        const tagAiMotion = document.getElementById('tagAiMotion');
+        if (valAiMotion) valAiMotion.innerText = `${d.aiMotion} (${d.aiConf || 99}%)`;
+        if (tagAiMotion) {
+          tagAiMotion.innerText = `BUMPS FILTERED: ${d.aiBumps || 0}`;
+          if (d.aiMotion === 'TAMPER') {
+            tagAiMotion.className = 'tag tag-danger';
+          } else if (d.aiMotion === 'BUMP') {
+            tagAiMotion.className = 'tag tag-warn';
+          } else {
+            tagAiMotion.className = 'tag tag-info';
+          }
+        }
+      }
+
+      // AI #2: Environmental Anomaly Detector
+      if (d.aiScore !== undefined) {
+        const valAiAnomaly = document.getElementById('valAiAnomaly');
+        const tagAiAnomaly = document.getElementById('tagAiAnomaly');
+        if (valAiAnomaly) valAiAnomaly.innerText = `${anomalyNum} %`;
+        if (tagAiAnomaly) {
+          const baseInfo = d.baseTemp ? ` (Base: ${Number(d.baseTemp).toFixed(1)}°C / ${Number(d.baseHum).toFixed(0)}%)` : '';
+          tagAiAnomaly.innerText = `${d.aiEnv || 'NORMAL'}${baseInfo}`;
+          if (d.envAnomaly || d.aiEnv === 'ANOMALY') {
+            tagAiAnomaly.className = 'tag tag-danger';
+          } else if (d.aiEnv === 'UNUSUAL') {
+            tagAiAnomaly.className = 'tag tag-warn';
+          } else {
+            tagAiAnomaly.className = 'tag tag-ok';
+          }
+        }
+      }
+
+      // Push live numbers to Chart
+      pushChartData(nowTime, tempNum, humNum, anomalyNum, flameNum);
+    } catch (err) {
+      console.error('Error updating telemetry UI:', err);
     }
   }
 
@@ -848,7 +1538,7 @@
     }
   }
 
-  // ==================== DISARM SECURITY PIN LOGIC ====================
+  // ==================== PASSCODE LOGIC (DYNAMIC LENGTH) ====================
   let currentPin = '';
   const DEFAULT_PIN = '1234';
 
@@ -856,12 +1546,64 @@
     return localStorage.getItem('guardian_disarm_pin') || DEFAULT_PIN;
   }
 
+  function renderPasscodeDots() {
+    const container = document.getElementById('pinDotsRow');
+    if (!container) return;
+    const pinLen = getStoredPin().length;
+    container.innerHTML = '';
+    for (let i = 0; i < pinLen; i++) {
+      const dot = document.createElement('div');
+      dot.className = 'pin-dot' + (i < currentPin.length ? ' filled' : '');
+      dot.id = 'dot' + i;
+      container.appendChild(dot);
+    }
+
+    const hint = document.getElementById('pinHintText');
+    if (hint) {
+      const isDefault = getStoredPin() === DEFAULT_PIN;
+      hint.innerHTML = `Passcode: <strong>${pinLen} digits</strong> ${isDefault ? '(Default: 1234)' : ''}`;
+    }
+  }
+
+  let modalAction = 'DISARM'; // 'DISARM' or 'IGNORE'
+
   function openDisarmModal() {
+    openPasscodeModal('DISARM');
+  }
+
+  function openPasscodeModal(action = 'DISARM') {
+    modalAction = action;
     currentPin = '';
-    const pinInput = document.getElementById('pinInput');
     const pinError = document.getElementById('pinErrorMsg');
-    pinInput.value = '';
-    pinError.style.display = 'none';
+    if (pinError) pinError.style.display = 'none';
+
+    const titleEl = document.getElementById('modalTitle');
+    const descEl = document.getElementById('modalDesc');
+    const submitBtn = document.getElementById('modalSubmitBtn');
+    const iconBubble = document.getElementById('modalIconBubble');
+
+    if (action === 'IGNORE') {
+      if (titleEl) titleEl.innerText = 'Authorize Ignore';
+      if (descEl) descEl.innerText = 'Enter passcode to clear warning (remains armed).';
+      if (iconBubble) iconBubble.innerText = '⚠️';
+      if (submitBtn) {
+        submitBtn.innerHTML = '&#9888;&#65039; Ignore Warning';
+        submitBtn.style.background = 'linear-gradient(180deg, #ff9f0a 0%, #d97706 100%)';
+        submitBtn.style.boxShadow = '0 4px 18px rgba(255, 159, 10, 0.4)';
+      }
+    } else {
+      if (titleEl) titleEl.innerText = 'Enter Passcode';
+      if (descEl) descEl.innerText = 'Enter security PIN to disarm alarm.';
+      if (iconBubble) iconBubble.innerText = '🔒';
+      if (submitBtn) {
+        submitBtn.innerHTML = '&#128275; Disarm';
+        submitBtn.style.background = 'linear-gradient(180deg, #ff453a 0%, #d70015 100%)';
+        submitBtn.style.boxShadow = '0 4px 18px rgba(255, 69, 58, 0.38)';
+      }
+    }
+
+    renderPasscodeDots();
+    updatePinDisplay();
     document.getElementById('disarmModal').style.display = 'flex';
     document.addEventListener('keydown', handleKeypadKey);
   }
@@ -870,6 +1612,7 @@
     document.getElementById('disarmModal').style.display = 'none';
     document.removeEventListener('keydown', handleKeypadKey);
     currentPin = '';
+    updatePinDisplay();
   }
 
   function handleBackdropClick(e) {
@@ -879,10 +1622,15 @@
   }
 
   function pressPin(digit) {
-    if (currentPin.length < 8) {
+    const validPin = getStoredPin();
+    if (currentPin.length < validPin.length) {
       currentPin += digit;
       updatePinDisplay();
       playClickSound();
+
+      if (currentPin.length === validPin.length) {
+        setTimeout(submitDisarmPin, 120);
+      }
     }
   }
 
@@ -890,16 +1638,36 @@
     currentPin = '';
     updatePinDisplay();
     document.getElementById('pinErrorMsg').style.display = 'none';
+    playClickSound();
   }
 
   function backspacePin() {
     currentPin = currentPin.slice(0, -1);
     updatePinDisplay();
     document.getElementById('pinErrorMsg').style.display = 'none';
+    playClickSound();
   }
 
   function updatePinDisplay() {
     document.getElementById('pinInput').value = currentPin;
+
+    const validPin = getStoredPin();
+    const container = document.getElementById('pinDotsRow');
+    if (container && container.children.length !== validPin.length) {
+      renderPasscodeDots();
+      return;
+    }
+
+    for (let i = 0; i < validPin.length; i++) {
+      const dot = document.getElementById('dot' + i);
+      if (dot) {
+        if (i < currentPin.length) {
+          dot.classList.add('filled');
+        } else {
+          dot.classList.remove('filled');
+        }
+      }
+    }
   }
 
   function submitDisarmPin() {
@@ -909,7 +1677,12 @@
 
     if (currentPin === validPin) {
       playSuccessSound();
-      sendCommand('DISARM');
+      if (modalAction === 'IGNORE') {
+        sendCommand('IGNORE');
+        handleAlarmState('NORMAL');
+      } else {
+        sendCommand('DISARM');
+      }
       closeDisarmModal();
     } else {
       playErrorSound();
@@ -936,20 +1709,24 @@
 
   function changeSecurityPin() {
     const currentValid = getStoredPin();
-    const oldPin = prompt('Enter CURRENT Security PIN (default 1234):');
+    const oldPin = prompt(`Enter CURRENT Passcode (${currentValid.length} digits):`);
     if (oldPin === null) return;
     if (oldPin !== currentValid) {
-      alert('❌ Current PIN incorrect. Cannot change PIN.');
+      alert('❌ Current Passcode incorrect.');
       return;
     }
-    const newPin = prompt('Enter NEW Security PIN (4 to 8 digits):');
+    const newPin = prompt('Enter NEW Passcode (4 to 8 digits):');
     if (!newPin) return;
-    if (newPin.trim().length < 4) {
-      alert('❌ PIN must be at least 4 digits.');
+    const cleanPin = newPin.trim();
+    if (cleanPin.length < 4 || cleanPin.length > 8 || !/^\d+$/.test(cleanPin)) {
+      alert('❌ Passcode must be between 4 and 8 numerical digits.');
       return;
     }
-    localStorage.setItem('guardian_disarm_pin', newPin.trim());
-    alert('✅ Security PIN updated successfully!');
+    localStorage.setItem('guardian_disarm_pin', cleanPin);
+    currentPin = '';
+    renderPasscodeDots();
+    updatePinDisplay();
+    alert(`✅ Passcode updated successfully! (${cleanPin.length} digits active)`);
   }
 
   function playClickSound() {
@@ -958,13 +1735,13 @@
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.type = 'sine';
-      osc.frequency.setValueAtTime(600, ctx.currentTime);
-      gain.gain.setValueAtTime(0.08, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.04);
+      osc.frequency.setValueAtTime(800, ctx.currentTime);
+      gain.gain.setValueAtTime(0.04, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.035);
       osc.connect(gain);
       gain.connect(ctx.destination);
       osc.start();
-      osc.stop(ctx.currentTime + 0.04);
+      osc.stop(ctx.currentTime + 0.035);
     } catch(e) {}
   }
 
@@ -973,35 +1750,50 @@
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(180, ctx.currentTime);
-      gain.gain.setValueAtTime(0.12, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(140, ctx.currentTime);
+      gain.gain.setValueAtTime(0.14, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.22);
       osc.connect(gain);
       gain.connect(ctx.destination);
       osc.start();
-      osc.stop(ctx.currentTime + 0.25);
+      osc.stop(ctx.currentTime + 0.22);
     } catch(e) {}
   }
 
   function playSuccessSound() {
     try {
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(523.25, ctx.currentTime);
-      osc.frequency.setValueAtTime(659.25, ctx.currentTime + 0.08);
-      gain.gain.setValueAtTime(0.1, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start();
-      osc.stop(ctx.currentTime + 0.25);
+      const now = ctx.currentTime;
+      
+      const osc1 = ctx.createOscillator();
+      const gain1 = ctx.createGain();
+      osc1.type = 'sine';
+      osc1.frequency.setValueAtTime(784, now);
+      gain1.gain.setValueAtTime(0.09, now);
+      gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+      osc1.connect(gain1);
+      gain1.connect(ctx.destination);
+      osc1.start(now);
+      osc1.stop(now + 0.09);
+
+      const osc2 = ctx.createOscillator();
+      const gain2 = ctx.createGain();
+      osc2.type = 'sine';
+      osc2.frequency.setValueAtTime(1046.5, now + 0.08);
+      gain2.gain.setValueAtTime(0.11, now + 0.08);
+      gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+      osc2.connect(gain2);
+      gain2.connect(ctx.destination);
+      osc2.start(now + 0.08);
+      osc2.stop(now + 0.3);
     } catch(e) {}
   }
 
-  window.addEventListener('load', initMQTT);
+  window.addEventListener('load', () => {
+    initChart();
+    initMQTT();
+  });
 </script>
 </body>
 </html>
