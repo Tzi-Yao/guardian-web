@@ -843,14 +843,14 @@
   <div>
     <div class="section-title">&#128737;&#65039; PERIMETER &amp; MOTION DEFENSE</div>
     <div class="dashboard-grid">
-      <!-- mmWave Radar Card -->
+      <!-- Enclosure & Perimeter Security -->
       <div class="card">
         <div class="card-header">
-          <span class="card-title">Presence (LD2412 Radar)</span>
-          <div class="card-icon-bubble">&#128225;</div>
+          <span class="card-title">Perimeter &amp; Tamper Defense</span>
+          <div class="card-icon-bubble">&#128737;&#65039;</div>
         </div>
-        <div id="valRadar" class="card-value">VACANT</div>
-        <span id="tagRadar" class="tag tag-ok">ROOM CLEAR</span>
+        <div id="valPerimeter" class="card-value">SECURE</div>
+        <span id="tagPerimeter" class="tag tag-ok">NORMAL MONITORING</span>
       </div>
 
       <!-- Orientation & Tamper -->
@@ -895,6 +895,32 @@
   <div>
     <div class="section-title">&#127777;&#65039; CLIMATE &amp; HAZARD SENSORS</div>
     <div class="dashboard-grid">
+      <!-- Barometric Pressure Card (BME688) -->
+      <div class="card" id="cardPressure" style="border-color: rgba(90, 200, 250, 0.25);">
+        <div class="card-header">
+          <span class="card-title">Barometric Pressure</span>
+          <div class="card-icon-bubble">&#127780;&#65039;</div>
+        </div>
+        <div id="valPressure" class="card-value">-- <span style="font-size:1.1rem; color:var(--text-secondary);">hPa</span></div>
+        <div class="card-footer">
+          <span class="tag tag-ok" id="tagPressure">NORMAL</span>
+          <small id="valFusionBadge" style="color:#5ac8fa;">DHT22 Standalone</small>
+        </div>
+      </div>
+
+      <!-- Air Quality & VOC Gas Scanner Card (BME688) -->
+      <div class="card" id="cardGas" style="border-color: rgba(255, 159, 10, 0.25);">
+        <div class="card-header">
+          <span class="card-title">Air Quality (IAQ) &amp; VOC Gas</span>
+          <div class="card-icon-bubble">&#129514;</div>
+        </div>
+        <div id="valIaq" class="card-value">-- <span style="font-size:1.1rem; color:var(--text-secondary);">IAQ</span></div>
+        <div class="card-footer">
+          <span class="tag tag-ok" id="tagGas">CLEAN AIR</span>
+          <small id="valGasRes" style="color:var(--text-secondary);">Gas: -- k&Omega;</small>
+        </div>
+      </div>
+
       <!-- Temperature Card -->
       <div class="card">
         <div class="card-header">
@@ -952,6 +978,9 @@
           <button type="button" class="segment-btn" onclick="switchGraphMetric('anomaly')">AI Anomaly</button>
           <button type="button" class="segment-btn" onclick="switchGraphMetric('flame')">Flame IR</button>
           <button type="button" class="segment-btn" onclick="switchGraphMetric('rssi')">Signal (dBm)</button>
+          <button type="button" class="segment-btn" onclick="switchGraphMetric('pressure')">Pressure (hPa)</button>
+          <button type="button" class="segment-btn" onclick="switchGraphMetric('iaq')">Air Quality (IAQ)</button>
+          <button type="button" class="segment-btn" onclick="switchGraphMetric('gas')">VOC Gas (k&Omega;)</button>
         </div>
       </div>
     </div>
@@ -1140,7 +1169,10 @@
     hum: [],
     anomaly: [],
     flame: [],
-    rssi: []
+    rssi: [],
+    pressure: [],
+    iaq: [],
+    gas: []
   };
 
   const metricConfigs = {
@@ -1173,6 +1205,24 @@
       color: '#5ac8fa',
       gradientStart: 'rgba(90, 200, 250, 0.28)',
       unit: 'dBm'
+    },
+    pressure: {
+      label: 'Atmospheric Pressure (hPa)',
+      color: '#64d2ff',
+      gradientStart: 'rgba(100, 210, 255, 0.28)',
+      unit: 'hPa'
+    },
+    iaq: {
+      label: 'Indoor Air Quality Index (0-500)',
+      color: '#ffd60a',
+      gradientStart: 'rgba(255, 214, 10, 0.28)',
+      unit: 'IAQ'
+    },
+    gas: {
+      label: 'MOX Gas Resistance (Lower = Smoke/VOCs)',
+      color: '#ff375f',
+      gradientStart: 'rgba(255, 55, 95, 0.28)',
+      unit: 'kΩ'
     }
   };
 
@@ -1326,7 +1376,7 @@
     }
   }
 
-  function pushChartData(timeLabel, temp, hum, anomaly, flame, rssi) {
+  function pushChartData(timeLabel, temp, hum, anomaly, flame, rssi, pressure, iaq, gas) {
     if (historyData.labels.length >= MAX_STORAGE_POINTS) {
       historyData.labels.shift();
       historyData.temp.shift();
@@ -1334,6 +1384,9 @@
       historyData.anomaly.shift();
       historyData.flame.shift();
       if (historyData.rssi) historyData.rssi.shift();
+      if (historyData.pressure) historyData.pressure.shift();
+      if (historyData.iaq) historyData.iaq.shift();
+      if (historyData.gas) historyData.gas.shift();
     }
 
     historyData.labels.push(timeLabel);
@@ -1343,6 +1396,12 @@
     historyData.flame.push(flame);
     if (!historyData.rssi) historyData.rssi = [];
     historyData.rssi.push(rssi !== undefined ? rssi : -60);
+    if (!historyData.pressure) historyData.pressure = [];
+    historyData.pressure.push((pressure && pressure > 500) ? pressure : 1013.25);
+    if (!historyData.iaq) historyData.iaq = [];
+    historyData.iaq.push(iaq || 25);
+    if (!historyData.gas) historyData.gas = [];
+    historyData.gas.push(gas || 50.0);
 
     updateChartRender();
   }
@@ -1485,22 +1544,18 @@
         tagHum.className = 'tag ' + (humNum < 20.0 ? 'tag-warn' : 'tag-ok');
       }
 
-      // mmWave Radar
-      const valRadar = document.getElementById('valRadar');
-      const tagRadar = document.getElementById('tagRadar');
-      if (valRadar && tagRadar) {
-        if (d.intrusion) {
-          valRadar.innerText = 'INTRUDER!';
-          tagRadar.innerText = 'ALARM TRIGGERED';
-          tagRadar.className = 'tag tag-danger';
-        } else if (d.mmwave) {
-          valRadar.innerText = 'OCCUPIED';
-          tagRadar.innerText = 'HUMAN DETECTED';
-          tagRadar.className = 'tag tag-warn';
+      // Perimeter & Tamper Defense
+      const valPerimeter = document.getElementById('valPerimeter');
+      const tagPerimeter = document.getElementById('tagPerimeter');
+      if (valPerimeter && tagPerimeter) {
+        if (d.intrusionAlarm || d.tamperAlarm) {
+          valPerimeter.innerText = 'ALARM ACTIVE!';
+          tagPerimeter.innerText = d.tamperAlarm ? 'TAMPER BREACH' : 'SECURITY ALERT';
+          tagPerimeter.className = 'tag tag-danger';
         } else {
-          valRadar.innerText = 'VACANT';
-          tagRadar.innerText = 'ROOM CLEAR';
-          tagRadar.className = 'tag tag-ok';
+          valPerimeter.innerText = 'SECURE';
+          tagPerimeter.innerText = 'SYSTEM ARMED & SECURE';
+          tagPerimeter.className = 'tag tag-ok';
         }
       }
 
@@ -1561,7 +1616,48 @@
 
       // Push live numbers to Chart
       const rssiNum = (typeof d.rssi === 'number') ? d.rssi : (parseInt(d.rssi) || -60);
-      pushChartData(nowTime, tempNum, humNum, anomalyNum, flameNum, rssiNum);
+      const pressNum = (typeof d.pressure === 'number') ? d.pressure : (parseFloat(d.pressure) || 0);
+
+      // Update Barometer Card & Fusion State
+      const valPressure = document.getElementById('valPressure');
+      const valFusion = document.getElementById('valFusionBadge');
+      if (valPressure) {
+        if (pressNum > 500) {
+          valPressure.innerHTML = pressNum.toFixed(1) + ' <span style="font-size:1.1rem; color:var(--text-secondary);">hPa</span>';
+          if (valFusion) {
+            valFusion.innerHTML = d.bmeOK && d.dhtOK ? '⚡ 2x Dual Fusion (DHT22 + BME280)' : (d.bmeOK ? 'BME280 Only' : 'DHT22 Only');
+          }
+        } else {
+          valPressure.innerHTML = '-- <span style="font-size:1.1rem; color:var(--text-secondary);">hPa</span>';
+          if (valFusion) valFusion.innerText = 'DHT22 Standalone (BME280 Pending)';
+        }
+      }
+
+      const iaqNum = (typeof d.iaq === 'number') ? d.iaq : (parseFloat(d.iaq) || 0);
+      const gasNum = (typeof d.gasKOhms === 'number') ? d.gasKOhms : (parseFloat(d.gasKOhms) || 0);
+
+      // Update IAQ & Gas Card
+      const valIaq = document.getElementById('valIaq');
+      const tagGas = document.getElementById('tagGas');
+      const valGasRes = document.getElementById('valGasRes');
+      if (valIaq) {
+        if (d.bmeOK && iaqNum > 0) {
+          valIaq.innerHTML = Math.round(iaqNum) + ' <span style="font-size:1.1rem; color:var(--text-secondary);">IAQ</span>';
+          if (valGasRes) valGasRes.innerHTML = 'Gas: ' + gasNum.toFixed(1) + ' k&Omega;';
+          if (tagGas) {
+            if (iaqNum <= 50) { tagGas.innerText = 'EXCELLENT'; tagGas.className = 'tag tag-ok'; }
+            else if (iaqNum <= 100) { tagGas.innerText = 'GOOD'; tagGas.className = 'tag tag-ok'; }
+            else if (iaqNum <= 175) { tagGas.innerText = 'FAIR / STALE'; tagGas.className = 'tag tag-warn'; }
+            else { tagGas.innerText = 'POOR / VOC SPIKE'; tagGas.className = 'tag tag-danger'; }
+          }
+        } else {
+          valIaq.innerHTML = '-- <span style="font-size:1.1rem; color:var(--text-secondary);">IAQ</span>';
+          if (valGasRes) valGasRes.innerText = 'BME688 Offline';
+          if (tagGas) { tagGas.innerText = 'STANDBY'; tagGas.className = 'tag tag-ok'; }
+        }
+      }
+
+      pushChartData(nowTime, tempNum, humNum, anomalyNum, flameNum, rssiNum, pressNum, iaqNum, gasNum);
     } catch (err) {
       console.error('Error updating telemetry UI:', err);
     }
