@@ -904,7 +904,7 @@
         <div id="valPressure" class="card-value">-- <span style="font-size:1.1rem; color:var(--text-secondary);">hPa</span></div>
         <div class="card-footer">
           <span class="tag tag-ok" id="tagPressure">NORMAL</span>
-          <small id="valFusionBadge" style="color:#5ac8fa;">DHT22 Standalone</small>
+          <small id="valFusionBadge" style="color:#5ac8fa;">DHT22 Standalone (BME688 Pending)</small>
         </div>
       </div>
 
@@ -1625,11 +1625,11 @@
         if (pressNum > 500) {
           valPressure.innerHTML = pressNum.toFixed(1) + ' <span style="font-size:1.1rem; color:var(--text-secondary);">hPa</span>';
           if (valFusion) {
-            valFusion.innerHTML = d.bmeOK && d.dhtOK ? '⚡ 2x Dual Fusion (DHT22 + BME280)' : (d.bmeOK ? 'BME280 Only' : 'DHT22 Only');
+            valFusion.innerHTML = d.bmeOK && d.dhtOK ? '⚡ 2x Dual Fusion (DHT22 + BME688)' : (d.bmeOK ? 'BME688 Only' : 'DHT22 Only');
           }
         } else {
           valPressure.innerHTML = '-- <span style="font-size:1.1rem; color:var(--text-secondary);">hPa</span>';
-          if (valFusion) valFusion.innerText = 'DHT22 Standalone (BME280 Pending)';
+          if (valFusion) valFusion.innerText = 'DHT22 Standalone (BME688 Pending)';
         }
       }
 
