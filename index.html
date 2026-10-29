@@ -1522,8 +1522,17 @@
       const lastSeenEl = document.getElementById('lastSeen');
       if (lastSeenEl) lastSeenEl.innerText = 'Last update: ' + nowTime;
 
-      const tempNum = (typeof d.temp === 'number') ? d.temp : (parseFloat(d.temp) || 0);
-      const humNum = (typeof d.hum === 'number') ? d.hum : (parseFloat(d.hum) || 0);
+      // Clean zero-drop filter for single-wire sensors (DHT22 / telemetry glitches)
+      let tempNum = (typeof d.temp === 'number') ? d.temp : (parseFloat(d.temp) || 0);
+      let humNum = (typeof d.hum === 'number') ? d.hum : (parseFloat(d.hum) || 0);
+
+      // If a single packet drops to 0.0, retain previous valid chart values instead of dropping graph lines to zero
+      if (tempNum <= 0.0 && historyData.temp.length > 0) {
+        tempNum = historyData.temp[historyData.temp.length - 1];
+      }
+      if (humNum <= 0.0 && historyData.hum.length > 0) {
+        humNum = historyData.hum[historyData.hum.length - 1];
+      }
       const flameNum = (typeof d.flame === 'number') ? d.flame : (parseInt(d.flame) || 0);
       const anomalyNum = (typeof d.aiScore === 'number') ? d.aiScore : (parseInt(d.aiScore) || 0);
 
