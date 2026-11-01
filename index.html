@@ -1013,6 +1013,25 @@
     <div class="chart-canvas-container">
       <canvas id="telemetryChart"></canvas>
     </div>
+
+    <!-- Option 10 & 11: 1-Click CSV Data Logger & Telegram Analytics Digest Toolbar -->
+    <div style="margin-top: 1rem; padding-top: 0.9rem; border-top: 1px solid rgba(255,255,255,0.08); display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; justify-content: space-between;">
+      <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.82rem; color: var(--text-secondary);">
+        <span>&#128190; <strong>Black-Box CSV Logger:</strong> Recording live telemetry for project reports</span>
+        <span id="csvRowBadge" style="background: rgba(48, 209, 88, 0.15); color: #30d158; border: 1px solid rgba(48, 209, 88, 0.35); padding: 2px 8px; border-radius: 999px; font-weight: 600; font-size: 0.75rem;">0 rows</span>
+      </div>
+      <div style="display: flex; gap: 0.6rem; flex-wrap: wrap;">
+        <button type="button" onclick="exportTelemetryCSV()" style="background: linear-gradient(180deg, #30d158 0%, #248a3d 100%); color: #fff; border: none; padding: 0.5rem 1rem; border-radius: 980px; font-weight: 600; font-size: 0.8rem; cursor: pointer; box-shadow: 0 3px 12px rgba(48, 209, 88, 0.3);">
+          &#128229; Download CSV Report
+        </button>
+        <button type="button" onclick="triggerTelegramDigest()" style="background: linear-gradient(180deg, #0a84ff 0%, #0071e3 100%); color: #fff; border: none; padding: 0.5rem 1rem; border-radius: 980px; font-weight: 600; font-size: 0.8rem; cursor: pointer; box-shadow: 0 3px 12px rgba(10, 132, 255, 0.3);">
+          &#128202; Send Telegram Digest (/report)
+        </button>
+        <button type="button" onclick="clearTelemetryCSV()" style="background: rgba(255, 255, 255, 0.08); color: var(--text-secondary); border: 1px solid rgba(255, 255, 255, 0.14); padding: 0.5rem 0.85rem; border-radius: 980px; font-weight: 600; font-size: 0.78rem; cursor: pointer;">
+          Clear Log
+        </button>
+      </div>
+    </div>
   </div>
 
   <!-- OTA Firmware Update Card -->
@@ -1667,9 +1686,87 @@
       }
 
       pushChartData(nowTime, tempNum, humNum, anomalyNum, flameNum, rssiNum, pressNum, iaqNum, gasNum);
+      recordCSVRow(d, tempNum, humNum, pressNum, iaqNum, gasNum, flameNum, anomalyNum, rssiNum);
     } catch (err) {
       console.error('Error updating telemetry UI:', err);
     }
+  }
+
+
+  // ==================== OPTION 10 & 11: CSV DATA LOGGER & TELEGRAM DIGEST ====================
+  const csvTelemetryRows = [];
+
+  function recordCSVRow(d, temp, hum, press, iaq, gas, flame, anomaly, rssi) {
+    if (csvTelemetryRows.length >= 10000) {
+      csvTelemetryRows.shift();
+    }
+    const isoNow = new Date().toISOString();
+    csvTelemetryRows.push({
+      timestamp: isoNow,
+      state: d.state || 'DISARMED',
+      temp: temp.toFixed(1),
+      hum: hum.toFixed(1),
+      pressure: press > 500 ? press.toFixed(1) : '0.0',
+      iaq: Math.round(iaq || 0),
+      gas: (gas || 0).toFixed(1),
+      flame: flame,
+      angleX: (typeof d.angleX === 'number') ? d.angleX.toFixed(1) : '0.0',
+      angleY: (typeof d.angleY === 'number') ? d.angleY.toFixed(1) : '0.0',
+      aiMotion: d.aiMotion || 'STILL',
+      aiConf: d.aiConf || 99,
+      aiBumps: d.aiBumps || 0,
+      aiAnomaly: anomaly,
+      unauthTaps: d.unauthTaps || 0,
+      rssi: rssi,
+      alarm: d.alarm ? 'TRUE' : 'FALSE'
+    });
+    const badge = document.getElementById('csvRowBadge');
+    if (badge) {
+      badge.innerText = `${csvTelemetryRows.length} rows`;
+    }
+  }
+
+  function exportTelemetryCSV() {
+    if (csvTelemetryRows.length === 0) {
+      alert('No telemetry rows recorded yet! Wait a few seconds for live ESP32 data.');
+      return;
+    }
+    const headers = [
+      'Timestamp_ISO', 'System_State', 'Temperature_C', 'Humidity_Pct',
+      'Pressure_hPa', 'IAQ_Index', 'VOC_Gas_kOhms', 'Flame_IR_ADC',
+      'Pitch_AngleX_Deg', 'Roll_AngleY_Deg', 'AI_Motion_Class', 'AI_Confidence_Pct',
+      'AI_Bumps_Filtered', 'AI_Anomaly_Score_Pct', 'Blocked_Disarm_Taps', 'WiFi_RSSI_dBm', 'Alarm_Active'
+    ];
+    const lines = [headers.join(',')];
+    for (const r of csvTelemetryRows) {
+      lines.push([
+        r.timestamp, r.state, r.temp, r.hum,
+        r.pressure, r.iaq, r.gas, r.flame,
+        r.angleX, r.angleY, r.aiMotion, r.aiConf,
+        r.aiBumps, r.aiAnomaly, r.unauthTaps, r.rssi, r.alarm
+      ].join(','));
+    }
+    const csvBlob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(csvBlob);
+    const a = document.createElement('a');
+    const dateStamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+    a.href = url;
+    a.download = `Project_Guardian_Telemetry_${dateStamp}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  function clearTelemetryCSV() {
+    csvTelemetryRows.length = 0;
+    const badge = document.getElementById('csvRowBadge');
+    if (badge) badge.innerText = '0 rows';
+  }
+
+  function triggerTelegramDigest() {
+    sendCommand('REPORT');
+    alert('📊 Analytics Digest requested! Your ESP32 is broadcasting the statistical summary card to all 4 Telegram users.');
   }
 
   function updateChannel() {
